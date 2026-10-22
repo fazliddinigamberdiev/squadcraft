@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SquadCraft · TransferMind</title>
-<meta name="description" content="SquadCraft TransferMind — football transfer intelligence prototype: squad audit, recruitment recommendations, emergency free agents and offload planner.">
+<meta name="description" content="SquadCraft TransferMind — football transfer intelligence prototype for clubs in the Premier League, Serie A, LaLiga, Bundesliga and Ligue 1.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -13,6 +13,7 @@
     --bg:#0b1210; --panel:#121c19; --panel2:#18241f; --line:#25352f;
     --text:#e7efe9; --muted:#8fa39a; --accent:#3ddc84; --accent2:#c6f432;
     --warn:#ffb547; --bad:#ff5d5d; --info:#5cc8ff;
+    --pl:#a46cff; --sa:#3d8bff; --ll:#ff6b4a; --bl:#ff4d6d; --l1:#d9f04a;
     --radius:14px;
   }
   *{box-sizing:border-box}
@@ -21,28 +22,61 @@
   h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;margin:0;letter-spacing:-.01em}
   button,select,input{font:inherit;color:inherit}
   .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+  .hidden{display:none !important}
 
-  /* header */
+  /* ===== welcome / club picker ===== */
+  #welcome{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:8vh 16px 40px;
+    background:radial-gradient(1000px 500px at 50% -10%,rgba(61,220,132,.16),transparent 60%),var(--bg)}
+  .w-logo{display:flex;align-items:center;gap:10px;margin-bottom:34px}
+  .w-inner{width:100%;max-width:640px;text-align:center}
+  #welcome h1{font-size:clamp(28px,5vw,44px);line-height:1.1}
+  #welcome .sub{color:var(--muted);margin:12px 0 26px;font-size:15px}
+  .search{position:relative;text-align:left}
+  .search input{width:100%;padding:16px 18px 16px 48px;font-size:17px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+  .search input:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .search .ico{position:absolute;left:17px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px;pointer-events:none}
+  .suggest{position:absolute;left:0;right:0;top:calc(100% + 6px);background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;z-index:20;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  .suggest button{display:flex;width:100%;align-items:center;gap:10px;padding:11px 14px;background:none;border:0;text-align:left;cursor:pointer}
+  .suggest button[aria-selected=true],.suggest button:hover{background:var(--panel2)}
+  .suggest .lg{margin-left:auto}
+  .go{margin-top:12px;width:100%;padding:14px;border-radius:12px;border:0;background:var(--accent);color:#04210f;font-weight:600;font-size:15px;cursor:pointer}
+  .go:disabled{opacity:.4;cursor:not-allowed}
+  .err{color:var(--warn);margin-top:10px;min-height:20px;font-size:13px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:26px 0 12px}
+  .chip{padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:13px;color:var(--muted)}
+  .chip[aria-pressed=true]{color:var(--text);border-color:var(--accent);background:rgba(61,220,132,.1)}
+  .club-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;width:100%;max-width:900px;margin-top:6px}
+  .club-btn{padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--panel);cursor:pointer;text-align:left;font-size:13px;display:flex;gap:8px;align-items:center}
+  .club-btn:hover{border-color:var(--accent)}
+  .crest{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:10px;font-weight:700;font-family:"Space Grotesk";flex:none;color:#0b1210}
+  .lg{font-size:11px;padding:2px 7px;border-radius:6px;font-weight:600;white-space:nowrap}
+  .lg-PL{background:rgba(164,108,255,.16);color:var(--pl)} .lg-SA{background:rgba(61,139,255,.16);color:var(--sa)}
+  .lg-LL{background:rgba(255,107,74,.16);color:var(--ll)} .lg-BL{background:rgba(255,77,109,.16);color:var(--bl)}
+  .lg-L1{background:rgba(217,240,74,.14);color:var(--l1)}
+  .w-note{color:var(--muted);font-size:12px;margin-top:22px;max-width:640px;text-align:center}
+
+  /* ===== app header ===== */
   header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f1a16,#0b1210)}
-  .top{display:flex;align-items:center;gap:14px;padding:16px 0;flex-wrap:wrap}
+  .top{display:flex;align-items:center;gap:12px;padding:16px 0;flex-wrap:wrap}
   .logo{display:flex;align-items:center;gap:10px}
-  .logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#062;font-weight:700;font-family:"Space Grotesk"}
+  .logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#04210f;font-weight:700;font-family:"Space Grotesk"}
   .logo h1{font-size:20px}
   .logo small{display:block;color:var(--muted);font-size:12px}
+  .club-id{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 6px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  .club-id .crest{width:34px;height:34px;font-size:12px}
+  .club-id b{font-family:"Space Grotesk";font-size:15px;display:block;line-height:1.1}
   .spacer{flex:1}
   .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);font-size:12px;color:var(--muted);background:var(--panel)}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:pulse 2s infinite}
-  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}0%{box-shadow:0 0 0 0 rgba(61,220,132,.6)}}
 
-  /* controls */
-  .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 0 16px}
+  .controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0 0 16px}
   .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
-  select,input[type=number]{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+  select{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
   select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
   input[type=range]{width:100%;accent-color:var(--accent)}
 
-  /* tabs */
-  nav.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:4px}
+  nav.tabs{display:flex;gap:4px;overflow-x:auto}
   .tab{background:none;border:0;padding:12px 14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
   .tab[aria-selected=true]{color:var(--text);border-color:var(--accent)}
   .tab .badge{background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:1px 7px;margin-left:6px}
@@ -55,28 +89,26 @@
   .kpi .l{color:var(--muted);font-size:12px}
   .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .side{grid-template-columns:320px minmax(0,1fr)}
-  .section-title{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px}
+  .section-title{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px;flex-wrap:wrap}
   .section-title h2{font-size:17px}
   .section-title p{margin:0;color:var(--muted);font-size:13px}
 
-  /* depth chart */
   .depth{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
-  .pos{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:border-color .15s}
+  .pos{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;cursor:pointer}
   .pos:hover{border-color:var(--accent)}
   .pos b{font-family:"Space Grotesk";font-size:15px;display:block}
   .pos .bar{height:6px;background:#0c1512;border-radius:4px;margin:8px 0 6px;overflow:hidden}
   .pos .bar i{display:block;height:100%;border-radius:4px}
   .pos small{color:var(--muted);font-size:11px}
 
-  /* tables */
   .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
-  table{width:100%;border-collapse:collapse;min-width:760px}
+  table{width:100%;border-collapse:collapse;min-width:820px}
   th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel2);cursor:pointer;user-select:none;position:sticky;top:0}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel2);cursor:pointer;user-select:none}
   th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
   tbody tr:hover{background:#15211c}
   tr.injured td{opacity:.55}
-  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;margin-right:4px;font-weight:500}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;margin:0 4px 2px 0;font-weight:500}
   .t-bad{background:rgba(255,93,93,.15);color:var(--bad)}
   .t-warn{background:rgba(255,181,71,.15);color:var(--warn)}
   .t-ok{background:rgba(61,220,132,.13);color:var(--accent)}
@@ -94,7 +126,6 @@
   .btn.primary{background:var(--accent);color:#04210f;border-color:var(--accent);font-weight:600}
   .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
 
-  /* cards */
   .cards{display:grid;gap:10px}
   .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
   .ovr{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-family:"Space Grotesk";font-weight:700;font-size:17px;background:#0c1512;border:1px solid var(--line)}
@@ -104,20 +135,16 @@
   .card .price{font-family:"Space Grotesk";font-weight:600;font-size:16px}
   .why{margin-top:5px}
   .empty{color:var(--muted);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:12px}
-  .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .col-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
   .col-head h3{font-size:15px}
-
   .alert{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,93,93,.4);background:rgba(255,93,93,.08);margin-bottom:16px;flex-wrap:wrap}
   .alert.info{border-color:rgba(92,200,255,.35);background:rgba(92,200,255,.07)}
   .alert p{margin:0;flex:1;min-width:220px}
-
   .buyers{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .buyer{font-size:12px;padding:4px 8px;border-radius:8px;background:#0c1512;border:1px solid var(--line)}
   .buyer b{color:var(--accent)}
-
-  .hidden{display:none}
-  footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding:18px 0 30px}
   .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px;cursor:pointer}
+  footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding:18px 0 30px}
 
   @media (max-width:900px){
     .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -129,28 +156,49 @@
     .controls{grid-template-columns:minmax(0,1fr)}
     .card{grid-template-columns:40px minmax(0,1fr)}
     .card .right{grid-column:1/-1;text-align:left;display:flex;gap:10px;align-items:center}
+    .club-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
 </style>
 </head>
 <body>
 
+<!-- ================= WELCOME: ASK FOR CLUB ================= -->
+<section id="welcome">
+  <div class="w-logo"><div class="logo-mark">SC</div><div style="text-align:left"><h3>SquadCraft</h3><span class="meta">TransferMind</span></div></div>
+  <div class="w-inner">
+    <h1>Which club do you run?</h1>
+    <p class="sub">Type your club's name to load its squad audit, transfer targets and emergency options.</p>
+    <form class="search" id="searchForm" autocomplete="off">
+      <div style="position:relative">
+      <span class="ico">⌕</span>
+      <input id="clubInput" type="text" placeholder="e.g. Arsenal, Inter, Real Betis, Dortmund, PSG…" aria-label="Club name" aria-autocomplete="list" aria-controls="suggest" autofocus>
+      <div class="suggest hidden" id="suggest" role="listbox"></div>
+      </div>
+      <button class="go" id="goBtn" type="submit" disabled>Open my club</button>
+      <div class="err" id="err"></div>
+    </form>
+  </div>
+  <div class="chips" id="leagueChips"></div>
+  <div class="club-grid" id="clubGrid"></div>
+  <p class="w-note">Database: all 96 clubs of the 2026/27 Premier League, Serie A, LaLiga, Bundesliga and Ligue 1. Squads, ratings and values are simulated prototype data (see footer).</p>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
 <header>
   <div class="wrap">
     <div class="top">
       <div class="logo">
         <div class="logo-mark">SC</div>
-        <div><h1>SquadCraft</h1><small>TransferMind · transfer intelligence prototype</small></div>
+        <div><h1>SquadCraft</h1><small>TransferMind</small></div>
       </div>
+      <div class="club-id" id="clubId"></div>
+      <button class="btn" id="switchClub">Switch club</button>
       <div class="spacer"></div>
-      <span class="pill"><span class="dot"></span>Live valuations (simulated) · <span id="clock">--:--:--</span></span>
+      <span class="pill"><span class="dot"></span>Live valuations (sim) · <span id="clock">--:--</span></span>
       <span class="pill">🔒 Club data stays in your browser</span>
     </div>
-
     <div class="controls">
-      <div class="field">
-        <label for="club">Your club</label>
-        <select id="club"></select>
-      </div>
       <div class="field">
         <label for="style">Manager playstyle</label>
         <select id="style"></select>
@@ -164,10 +212,9 @@
       </div>
       <div class="field">
         <label for="budget">Transfer budget: <span id="budgetVal"></span></label>
-        <input type="range" id="budget" min="5" max="150" step="5" value="60">
+        <input type="range" id="budget" min="5" max="250" step="5" value="60">
       </div>
     </div>
-
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="audit" aria-selected="true">Squad Audit</button>
       <button class="tab" role="tab" data-tab="recruit" aria-selected="false">Recruitment</button>
@@ -178,39 +225,23 @@
 </header>
 
 <main class="wrap">
-
-  <!-- SQUAD AUDIT -->
   <section id="tab-audit">
     <div class="grid kpis" id="kpis"></div>
-
     <div class="section-title"><h2>Depth by position</h2><p>Available players vs. target depth · click a position to scout it</p></div>
     <div class="depth" id="depth"></div>
-
     <div class="section-title"><h2>Roster &amp; valuations</h2><p>Click headers to sort · mark a long-term injury to trigger the emergency engine</p></div>
     <div class="table-wrap"><table id="roster"></table></div>
   </section>
 
-  <!-- RECRUITMENT -->
   <section id="tab-recruit" class="hidden">
-    <div class="alert info" id="recruitWindowNote"></div>
-    <div class="grid controls" style="padding:0;margin-bottom:16px">
-      <div class="field">
-        <label for="rPos">Position</label>
-        <select id="rPos"></select>
-      </div>
-      <div class="field">
-        <label for="youngAge">Future-proof max age</label>
-        <select id="youngAge"><option>21</option><option selected>23</option><option>25</option></select>
-      </div>
-      <div class="field">
-        <label for="youngFee">Future-proof fee cap: <span id="youngFeeVal"></span></label>
-        <input type="range" id="youngFee" min="5" max="80" step="5" value="30">
-      </div>
-      <div class="field">
-        <label>Current starter</label>
-        <div id="starterBox" class="meta" style="padding:9px 0"></div>
-      </div>
+    <div class="alert info" id="recruitNote"></div>
+    <div class="grid controls" style="grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin-bottom:16px">
+      <div class="field"><label for="rPos">Position</label><select id="rPos"></select></div>
+      <div class="field"><label for="rLeague">Search in league</label><select id="rLeague"></select></div>
+      <div class="field"><label for="youngAge">Future-proof max age</label><select id="youngAge"><option>21</option><option selected>23</option><option>25</option></select></div>
+      <div class="field"><label for="youngFee">Future-proof fee cap: <span id="youngFeeVal"></span></label><input type="range" id="youngFee" min="5" max="80" step="5" value="30"></div>
     </div>
+    <p class="meta" id="starterBox" style="margin:-4px 0 14px"></p>
     <div class="grid two">
       <div class="panel">
         <div class="col-head"><h3>⚡ Immediate Upgrade</h3><span class="meta">Outperforms starter · within budget</span></div>
@@ -223,16 +254,12 @@
     </div>
   </section>
 
-  <!-- EMERGENCY -->
   <section id="tab-emergency" class="hidden">
     <div id="emergencyAlert"></div>
     <div class="grid side">
       <div class="panel">
         <h3 style="font-size:15px;margin-bottom:12px">Search filters</h3>
-        <div class="field" style="margin-bottom:12px">
-          <label for="ePos">Position needed</label>
-          <select id="ePos"></select>
-        </div>
+        <div class="field" style="margin-bottom:12px"><label for="ePos">Position needed</label><select id="ePos"></select></div>
         <div class="field" style="margin-bottom:12px">
           <label for="wage">Max wage bracket</label>
           <select id="wage">
@@ -243,7 +270,7 @@
           </select>
         </div>
         <label class="check"><input type="checkbox" id="unfit"> Include players not fully match-fit</label>
-        <p class="meta" style="margin-top:14px">Free agents can be signed outside the transfer window. Ranked by match to the injured player's level and your manager's playstyle.</p>
+        <p class="meta" style="margin-top:14px">Free agents can be signed outside the transfer window. Ranked by closeness to the injured player's level and fit with your manager's playstyle.</p>
       </div>
       <div class="panel">
         <div class="col-head"><h3>🚑 Unattached players</h3><span class="meta" id="faCount"></span></div>
@@ -252,190 +279,298 @@
     </div>
   </section>
 
-  <!-- OFFLOAD -->
   <section id="tab-offload" class="hidden">
     <div class="alert info"><p id="offloadIntro"></p></div>
     <div class="cards" id="offloadList"></div>
   </section>
-
 </main>
 
 <footer>
   <div class="wrap">
     SquadCraft — ISE4133 Software Engineering prototype · Team: Rakhmatullaev Umid, Abdullaev Umrbek, Igamberdiev Fazliddin.<br>
-    All clubs, players and values are fictional demo data generated in the browser. Recommendations come from a transparent scoring model, not real scouting.
+    Club list: the real 2026/27 line-ups of the top 5 European leagues. Player names, ratings, values, wages and contracts are <b>simulated prototype data</b> generated in your browser — they are not real players. A later version replaces them with a live data API (e.g. API-Football).
   </div>
 </footer>
+</div>
 
 <script>
-/* ---------- seeded random so data is stable on every load ---------- */
-let seed = 20260922;
-function rnd(){ seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+/* ================= CLUB DATABASE (2026/27 season) =================
+   [name, short code, strength 0-100, default playstyle, aliases]          */
+const LEAGUES = {
+  PL:{name:"Premier League", country:"England", mult:1.35},
+  SA:{name:"Serie A", country:"Italy", mult:1.0},
+  LL:{name:"LaLiga", country:"Spain", mult:1.05},
+  BL:{name:"Bundesliga", country:"Germany", mult:1.05},
+  L1:{name:"Ligue 1", country:"France", mult:0.95}
+};
+const P="Possession", H="High-Press", C="Counter-Attack", B="Low-Block";
+const RAW = {
+  PL:[["Arsenal","ARS",85,H,"gunners afc"],["Aston Villa","AVL",79,H,"villa"],["Bournemouth","BOU",76,H,"cherries afcb"],
+      ["Brentford","BRE",76,C,"bees"],["Brighton & Hove Albion","BHA",77,P,"brighton seagulls"],["Chelsea","CHE",83,P,"blues cfc"],
+      ["Coventry City","COV",72,C,"coventry sky blues"],["Crystal Palace","CRY",77,C,"palace eagles"],["Everton","EVE",75,B,"toffees"],
+      ["Fulham","FUL",75,P,"cottagers"],["Hull City","HUL",71,C,"hull tigers"],["Ipswich Town","IPS",72,P,"ipswich tractor boys"],
+      ["Leeds United","LEE",74,H,"leeds lufc"],["Liverpool","LIV",85,H,"lfc reds"],["Manchester City","MCI",86,P,"man city mcfc citizens"],
+      ["Manchester United","MUN",80,C,"man utd man united mufc red devils"],["Newcastle United","NEW",80,H,"newcastle toon magpies nufc"],
+      ["Nottingham Forest","NFO",77,C,"forest nffc"],["Sunderland","SUN",74,C,"black cats safc"],["Tottenham Hotspur","TOT",80,H,"spurs tottenham thfc"]],
+  SA:[["Atalanta","ATA",80,H,"la dea"],["Bologna","BOL",78,H,"rossoblu"],["Cagliari","CAG",73,B,""],["Como","COM",78,P,"como 1907"],
+      ["Fiorentina","FIO",77,P,"viola"],["Frosinone","FRO",70,C,""],["Genoa","GEN",74,H,"grifone"],["Inter","INT",84,P,"inter milan internazionale nerazzurri"],
+      ["Juventus","JUV",82,P,"juve bianconeri"],["Lazio","LAZ",78,H,"biancocelesti"],["Lecce","LEC",72,B,""],["AC Milan","MIL",82,C,"milan rossoneri acm"],
+      ["Monza","MON",72,B,""],["Napoli","NAP",83,B,"ssc napoli partenopei"],["Parma","PAR",73,C,""],["Roma","ROM",80,H,"as roma giallorossi"],
+      ["Sassuolo","SAS",74,P,"neroverdi"],["Torino","TOR",75,H,"toro granata"],["Udinese","UDI",74,B,"friulani"],["Venezia","VEN",71,P,"lagunari"]],
+  LL:[["Deportivo Alavés","ALA",73,B,"alaves"],["Athletic Club","ATH",79,H,"athletic bilbao"],["Atlético Madrid","ATM",83,B,"atletico atleti"],
+      ["Barcelona","BAR",86,P,"barca fc barcelona fcb"],["Celta Vigo","CEL",75,P,"celta"],["Deportivo La Coruña","DEP",71,C,"depor deportivo a coruna"],
+      ["Elche","ELC",72,P,""],["Espanyol","ESP",73,B,""],["Getafe","GET",74,B,""],["Levante","LEV",72,C,""],["Málaga","MAL",71,C,"malaga"],
+      ["Osasuna","OSA",74,H,""],["Racing Santander","RAC",70,C,"racing"],["Rayo Vallecano","RAY",74,H,"rayo"],["Real Betis","BET",78,P,"betis"],
+      ["Real Madrid","RMA",86,C,"madrid rmcf los blancos"],["Real Sociedad","RSO",78,P,"la real sociedad"],["Sevilla","SEV",76,C,"sevilla fc"],
+      ["Valencia","VAL",75,C,"valencia cf"],["Villarreal","VIL",79,P,"yellow submarine"]],
+  BL:[["FC Augsburg","FCA",74,C,"augsburg"],["Bayern Munich","FCB",86,P,"bayern munchen fc bayern"],["Bayer Leverkusen","B04",82,P,"leverkusen"],
+      ["Borussia Dortmund","BVB",82,H,"dortmund bvb"],["Borussia Mönchengladbach","BMG",75,C,"gladbach monchengladbach"],["SV Elversberg","SVE",70,P,"elversberg"],
+      ["Eintracht Frankfurt","SGE",79,H,"frankfurt"],["SC Freiburg","SCF",77,H,"freiburg"],["Hamburger SV","HSV",73,C,"hamburg hsv"],
+      ["TSG Hoffenheim","TSG",76,H,"hoffenheim"],["1. FC Köln","KOE",73,C,"koln cologne fc koln"],["RB Leipzig","RBL",81,H,"leipzig"],
+      ["Mainz 05","M05",75,H,"mainz"],["SC Paderborn","SCP",70,C,"paderborn"],["Schalke 04","S04",72,C,"schalke"],["VfB Stuttgart","VFB",79,P,"stuttgart"],
+      ["Union Berlin","FCU",74,B,"union"],["Werder Bremen","SVW",74,P,"werder bremen"]],
+  L1:[["Angers","ANG",71,B,"sco angers"],["Auxerre","AUX",72,B,"aja"],["Stade Brestois","BRE",74,C,"brest"],["Le Havre","HAC",71,B,"havre"],
+      ["Le Mans","LEM",69,C,"le mans fc"],["RC Lens","RCL",77,H,"lens"],["Lille","LIL",79,P,"losc"],["Lorient","LOR",71,C,"fc lorient"],
+      ["Olympique Lyonnais","OL",79,P,"lyon ol"],["Olympique de Marseille","OM",80,H,"marseille om"],["AS Monaco","ASM",80,H,"monaco"],
+      ["OGC Nice","NIC",76,C,"nice"],["Paris FC","PFC",73,P,"pfc"],["Paris Saint-Germain","PSG",86,P,"psg paris"],["Stade Rennais","REN",76,C,"rennes"],
+      ["RC Strasbourg","RCS",76,P,"strasbourg"],["Toulouse","TFC",73,C,"tfc"],["Troyes","ETA",70,C,"estac troyes"]]
+};
+const CREST_COL = ["#3ddc84","#5cc8ff","#ffb547","#ff6b4a","#a46cff","#c6f432","#ff4d6d","#4be1d4","#f5f5f5"];
+const CLUBS = [];
+Object.entries(RAW).forEach(([lg,list])=>list.forEach(([name,code,str,style,alias])=>{
+  CLUBS.push({name,code,lg,str,style,alias,id:lg+"-"+code,col:CREST_COL[(name.length+code.charCodeAt(0))%CREST_COL.length]});
+}));
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+CLUBS.forEach(c=>c.keys = norm(c.name+" "+c.code+" "+c.alias));
+
+/* ================= SIMULATED PLAYER DATA ================= */
+let seed = 1;
+function hashSeed(str){ let h=2166136261; for(const ch of str){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619);} return h>>>0; }
+function rnd(){ seed = (Math.imul(seed,1664525) + 1013904223) >>> 0; return seed / 4294967296; }
 const ri = (a,b) => Math.floor(rnd()*(b-a+1))+a;
 const pick = arr => arr[Math.floor(rnd()*arr.length)];
 const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 
-/* ---------- reference data ---------- */
 const POS = ["GK","CB","FB","DM","CM","AM","W","ST"];
 const POS_NAME = {GK:"Goalkeeper",CB:"Centre-back",FB:"Full-back",DM:"Def. midfield",CM:"Central mid",AM:"Attacking mid",W:"Winger",ST:"Striker"};
-const TARGET_DEPTH = {GK:2,CB:4,FB:4,DM:2,CM:3,AM:2,W:4,ST:3};
+const TARGET_DEPTH = {GK:3,CB:4,FB:4,DM:2,CM:3,AM:2,W:4,ST:3};
 const STYLES = {
-  "High-Press":   {press:3,  pass:1,  pace:2,  phys:1,   desc:"intense pressing, quick transitions"},
-  "Possession":   {press:1,  pass:3,  pace:1,  phys:0.5, desc:"short passing, control of the ball"},
-  "Counter-Attack":{press:0.5,pass:1, pace:3,  phys:1.5, desc:"deep block, fast breaks"},
-  "Low-Block":    {press:0.5,pass:0.5,pace:1,  phys:3,   desc:"compact defending, physical duels"}
+  "High-Press":    {press:3,  pass:1,  pace:2,  phys:1,   desc:"intense pressing, quick transitions"},
+  "Possession":    {press:1,  pass:3,  pace:1,  phys:0.5, desc:"short passing, control of the ball"},
+  "Counter-Attack":{press:0.5,pass:1,  pace:3,  phys:1.5, desc:"deep block, fast breaks"},
+  "Low-Block":     {press:0.5,pass:0.5,pace:1,  phys:3,   desc:"compact defending, physical duels"}
 };
-const FIRST = ["Luca","Mateo","Jonas","Kai","Rafael","Tomas","Ilyas","Noah","Emre","Bruno","Sami","Viktor","Andre","Felix","Diego","Oskar","Malik","Hugo","Nikola","Aziz","Leon","Pablo","Elias","Timur","Yusuf","Marco","Kenji","Theo","Adrien","Bilal","Dario","Erik","Jamal","Lars","Omar","Rui","Stefan","Ivo","Nico","Amir"];
-const LAST = ["Varga","Moreau","Kovac","Lindqvist","Okafor","Santos","Bauer","Rahimov","Petrov","Costa","Haddad","Novak","Fischer","Silva","Mendes","Dragan","Larsen","Tanaka","Ruiz","Kurt","Nordin","Abiola","Ferreira","Holm","Ivanov","Rossi","Duarte","Yilmaz","Berg","Laurent","Mensah","Sato","Kral","Vidal","Weber","Aliyev","Nyberg","Correia","Hassan","Brandt"];
-const YEAR = 2026;
+const NAMES = {
+  PL:{f:["Jack","Harry","Callum","Ollie","Reece","Mason","Kieran","Josh","Ethan","Lewis","Tyrese","Jordan","Ben","Alfie","Rhys","Connor"],l:["Walker","Hughes","Barnes","Fletcher","Mitchell","Doyle","Carter","Palmer","Holloway","Bennett","Whitaker","Gray","Ashworth","Crane","Pearce","Ellison"]},
+  SA:{f:["Luca","Matteo","Davide","Federico","Alessandro","Lorenzo","Nicolò","Andrea","Simone","Gianluca","Riccardo","Tommaso","Marco","Pietro"],l:["Rossi","Bianchi","Ferraro","Esposito","Colombo","Ricci","Marino","Greco","Bruno","Galli","Conti","De Luca","Mancini","Lombardi"]},
+  LL:{f:["Pablo","Sergio","Álvaro","Iker","Javier","Unai","Hugo","Mario","Adrián","Rubén","Diego","Marcos","Iván","Raúl"],l:["García","Martínez","López","Sánchez","Romero","Navarro","Torres","Ruiz","Moreno","Herrera","Iglesias","Ortega","Castro","Vidal"]},
+  BL:{f:["Jonas","Leon","Felix","Lukas","Niklas","Tim","Florian","Maximilian","Paul","Jannik","Kevin","Moritz","Julian","Elias"],l:["Müller","Schmidt","Weber","Wagner","Becker","Hoffmann","Schulz","Koch","Richter","Klein","Wolf","Neumann","Braun","Krüger"]},
+  L1:{f:["Hugo","Théo","Lucas","Mathis","Enzo","Nathan","Rayan","Kylian","Adrien","Bastien","Maxence","Yanis","Jules","Noé"],l:["Martin","Bernard","Dubois","Lefèvre","Moreau","Laurent","Girard","Fontaine","Rousseau","Mercier","Blanc","Garnier","Chevalier","Faure"]},
+  INT:{f:["Mateo","Kai","Ilyas","Emre","Bruno","Sami","Viktor","Malik","Nikola","Aziz","Yusuf","Kenji","Amir","Kofi","Rui","Timur","Ousmane","Bilal","Dario","Erling"],l:["Okafor","Santos","Kovač","Lindqvist","Rahimov","Petrov","Haddad","Novak","Silva","Mendes","Larsen","Tanaka","Yılmaz","Mensah","Aliyev","Diallo","Kurt","Nordin","Abiola","Correia"]}
+};
+function playerName(lg){ const pool = rnd()<0.55 ? NAMES[lg] : NAMES.INT; return pick(pool.f)+" "+pick(rnd()<0.5?pool.l:NAMES.INT.l); }
 
-let usedNames = new Set();
-function name(){ let n; do { n = pick(FIRST)+" "+pick(LAST); } while(usedNames.has(n)); usedNames.add(n); return n; }
-
-/* attribute bias by position so styles affect positions differently */
 const POS_BIAS = {
   GK:{press:-15,pass:0,pace:-10,phys:10}, CB:{press:0,pass:-5,pace:-5,phys:12},
   FB:{press:5,pass:0,pace:10,phys:0},     DM:{press:5,pass:5,pace:-5,phys:8},
   CM:{press:5,pass:10,pace:0,phys:0},     AM:{press:0,pass:12,pace:5,phys:-8},
   W:{press:3,pass:0,pace:14,phys:-8},     ST:{press:2,pass:-3,pace:6,phys:8}
 };
+const YEAR = 2026;
+let uid = 0;
 
-function valueOf(p){
-  let base = Math.exp((p.rating-60)/6.2)*0.7;
-  let age = p.age<=21 ? 1.25+(p.potential-p.rating)/18 : p.age<=26 ? 1.2 : p.age<=29 ? 1.0 : p.age<=31 ? 0.65 : 0.35;
-  let yearsLeft = p.contract - YEAR;
-  let c = yearsLeft<=0 ? 0.55 : yearsLeft===1 ? 0.8 : 1;
-  return Math.max(0.3, Math.round(base*age*c*10)/10);
+function valueOf(p, mult=1){
+  const base = Math.exp((p.rating-60)/6.2)*0.65;
+  const age = p.age<=21 ? 1.25+(p.potential-p.rating)/18 : p.age<=26 ? 1.2 : p.age<=29 ? 1.0 : p.age<=31 ? 0.65 : 0.35;
+  const left = p.contract - YEAR;
+  const c = left<=0 ? 0.55 : left===1 ? 0.8 : 1;
+  return Math.max(0.3, Math.round(base*age*c*mult*10)/10);
 }
 
-function makePlayer(pos, level, opts={}){
+/* style bias: players at a club lean towards that club's playstyle */
+const STYLE_BIAS = {"High-Press":{press:8,pace:4},"Possession":{pass:9},"Counter-Attack":{pace:8,phys:3},"Low-Block":{phys:8,press:-3}};
+
+function makePlayer(pos, level, lg, styleLean, opts={}){
   const age = opts.age ?? ri(18,34);
-  const rating = clamp(Math.round(level + ri(-6,6) - (age<21?ri(2,7):0) - (age>32?ri(0,4):0)), 55, 91);
-  const potential = age<=23 ? clamp(rating + ri(4,14), rating, 93) : age<=27 ? rating + ri(0,3) : rating;
-  const b = POS_BIAS[pos];
-  const attr = k => clamp(ri(40,85) + b[k] + (age>30 && (k==="pace"||k==="press") ? -ri(5,15) : 0), 25, 96);
+  const rating = clamp(Math.round(level + ri(-5,5) - (age<21?ri(2,7):0) - (age>32?ri(0,4):0)), 52, 92);
+  const potential = age<=23 ? clamp(rating + ri(4,14), rating, 94) : age<=27 ? rating + ri(0,3) : rating;
+  const b = POS_BIAS[pos], sb = STYLE_BIAS[styleLean] || {};
+  const attr = k => clamp(ri(40,84) + b[k] + (sb[k]||0) + (age>30 && (k==="pace"||k==="press") ? -ri(5,15) : 0), 25, 96);
   const p = {
-    id: Math.random().toString(36).slice(2,9), name:name(), pos, age, rating, potential,
+    id:"p"+(uid++), name:playerName(lg), pos, age, rating, potential,
     press:attr("press"), pass:attr("pass"), pace:attr("pace"), phys:attr("phys"),
-    contract: opts.contract ?? YEAR + ri(0,5),
-    wage: opts.wage ?? Math.round(Math.exp((rating-60)/9)*6),
-    injured:false, trend:0, ...opts
+    contract: YEAR + ri(0,5), injured:false, trend:0, ...opts
   };
-  p.value = valueOf(p);
+  p.wage = opts.wage ?? Math.round(Math.exp((rating-60)/8.5)*5*LEAGUES[lg].mult);
+  p.value = opts.value ?? valueOf(p, LEAGUES[lg].mult);
   return p;
 }
 
-function styleFit(p, style){
-  const w = STYLES[style];
-  if(p.pos==="GK"){ /* keepers judged on distribution + presence only */
-    return Math.round(clamp(55 + (p.pass-55)*w.pass/4 + (p.phys-55)*w.phys/5 + 12, 30, 95));
-  }
-  const sum = w.press*p.press + w.pass*p.pass + w.pace*p.pace + w.phys*p.phys;
-  return Math.round(sum/(w.press+w.pass+w.pace+w.phys));
+function buildSquad(club){
+  seed = hashSeed(club.id);
+  const squad = [];
+  POS.forEach(pos=>{
+    const n = TARGET_DEPTH[pos];
+    for(let i=0;i<n;i++){
+      const level = club.str - (i>=Math.ceil(n/2) ? 5 : 0) - (pos==="GK" && i===2 ? 6 : 0);
+      squad.push(makePlayer(pos, level, club.lg, club.style, {club:club.name, clubId:club.id, lg:club.lg}));
+    }
+  });
+  /* realistic gaps: drop 1–2 random depth players */
+  const drops = ri(1,2);
+  for(let d=0; d<drops; d++){ squad.splice(ri(0,squad.length-1),1); }
+  return squad;
 }
+CLUBS.forEach(c=>{ c.squad = buildSquad(c); c.budget = Math.max(5, Math.round((c.str-64)*6*LEAGUES[c.lg].mult/5)*5); });
+const ALL_PLAYERS = CLUBS.flatMap(c=>c.squad);
 
-/* ---------- build the demo world ---------- */
-const CLUBS = [
-  {name:"Northbridge FC", level:78, style:"Possession"},
-  {name:"Real Costa Azul", level:80, style:"High-Press"},
-  {name:"Athletic Varenna", level:75, style:"Counter-Attack"},
-  {name:"Dynamo Kestrel", level:73, style:"Low-Block"}
-];
-CLUBS.forEach(c=>{
-  c.squad = [];
-  POS.forEach(pos=>{ for(let i=0;i<TARGET_DEPTH[pos];i++) c.squad.push(makePlayer(pos, c.level - (i>=Math.ceil(TARGET_DEPTH[pos]/2)?5:0))); });
-});
-/* make the audit interesting: thin one position per club */
-CLUBS[0].squad = CLUBS[0].squad.filter((p,i,arr)=>!(p.pos==="CB" && arr.filter(x=>x.pos==="CB").indexOf(p)===3));
-CLUBS[2].squad = CLUBS[2].squad.filter((p,i,arr)=>!(p.pos==="ST" && arr.filter(x=>x.pos==="ST").indexOf(p)===2));
-
-const BUYERS = [
-  {name:"Sporting Lumen",style:"Counter-Attack",budget:25,needs:["W","ST","FB"]},
-  {name:"FC Halden",style:"Low-Block",budget:15,needs:["CB","DM","GK"]},
-  {name:"Olympique Saréa",style:"Possession",budget:40,needs:["CM","AM","FB"]},
-  {name:"Racing Montclair",style:"High-Press",budget:35,needs:["W","CM","ST"]},
-  {name:"Inter Valtora",style:"Possession",budget:60,needs:["DM","CB","AM"]},
-  {name:"Celtic Moraine",style:"Low-Block",budget:12,needs:["ST","CB","FB"]},
-  {name:"Union Brasova",style:"Counter-Attack",budget:20,needs:["CB","W","DM"]},
-  {name:"Atlético Pirena",style:"High-Press",budget:50,needs:["FB","AM","GK"]},
-  {name:"Viking Askeløy",style:"Low-Block",budget:10,needs:["GK","DM","ST"]},
-  {name:"Hapoel Tamar",style:"Possession",budget:18,needs:["CM","W","CB"]}
-];
-
-const MARKET = [];
-POS.forEach(pos=>{
-  for(let i=0;i<5;i++) MARKET.push(makePlayer(pos, ri(78,88), {club:pick(BUYERS).name, age:ri(22,31)}));
-  for(let i=0;i<5;i++) MARKET.push(makePlayer(pos, ri(66,74), {club:pick(BUYERS).name, age:ri(17,22)}));
-});
-
+seed = hashSeed("free-agents-2026");
 const FITNESS = ["Match fit","Match fit","Match fit","Lacks match sharpness","Recovering (2–3 wks)"];
 const FREE_AGENTS = [];
 POS.forEach(pos=>{
-  for(let i=0;i<4;i++){
-    const age = ri(25,35);
-    const fa = makePlayer(pos, ri(66,80), {age, contract:YEAR, club:"Free agent"});
-    fa.wage = Math.round(fa.wage * (0.6 + rnd()*0.9));
-    fa.fitness = pick(FITNESS);
-    fa.lastClub = pick(BUYERS).name;
-    fa.value = 0;
+  for(let i=0;i<6;i++){
+    const ex = pick(CLUBS);
+    const fa = makePlayer(pos, ri(66,80), ex.lg, ex.style, {age:ri(24,35), contract:YEAR, club:"Free agent", value:0});
+    fa.wage = Math.round(fa.wage*(0.5+rnd()*0.8));
+    fa.fitness = pick(FITNESS); fa.lastClub = ex.name;
     FREE_AGENTS.push(fa);
   }
 });
 
-/* ---------- state ---------- */
+/* ================= WELCOME SCREEN ================= */
 const $ = s => document.querySelector(s);
-const state = { club:0, style:CLUBS[0].style, window:"open", budget:60, sortKey:"pos", sortDir:1, tab:"audit", rPos:null, ePos:null };
-const club = () => CLUBS[state.club];
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const crest = c => `<span class="crest" style="background:${c.col}">${c.code}</span>`;
+const lgTag = lg => `<span class="lg lg-${lg}">${LEAGUES[lg].name}</span>`;
+let chosen = null, sugg = [], sel = -1, chipLg = "ALL";
+
+function scoreClub(c, q){
+  const n = norm(c.name);
+  if(n===q || norm(c.code)===q) return 100;
+  if(n.startsWith(q)) return 80;
+  if(c.keys.split(" ").some(w=>w.startsWith(q))) return 60;
+  if(c.keys.includes(q)) return 40;
+  /* light typo tolerance: all query words appear as prefixes */
+  const ws = q.split(" ");
+  if(ws.length>1 && ws.every(w=>c.keys.split(" ").some(k=>k.startsWith(w)))) return 30;
+  return 0;
+}
+function search(q){
+  q = norm(q); if(!q) return [];
+  return CLUBS.map(c=>({c,s:scoreClub(c,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||b.c.str-a.c.str).slice(0,7).map(x=>x.c);
+}
+function renderSuggest(){
+  const box = $("#suggest");
+  if(!sugg.length){ box.classList.add("hidden"); return; }
+  box.innerHTML = sugg.map((c,i)=>`<button type="button" role="option" aria-selected="${i===sel}" data-i="${i}">${crest(c)}<span>${esc(c.name)}</span>${lgTag(c.lg)}</button>`).join("");
+  box.classList.remove("hidden");
+  box.querySelectorAll("button").forEach(b=>b.onmousedown=e=>{ e.preventDefault(); choose(sugg[+b.dataset.i]); });
+}
+function choose(c){
+  chosen = c; $("#clubInput").value = c.name; sugg = []; renderSuggest();
+  $("#goBtn").disabled = false; $("#err").textContent = "";
+}
+$("#clubInput").addEventListener("input", e=>{
+  chosen = null; sel = -1;
+  sugg = search(e.target.value);
+  const exact = sugg.find(c=>norm(c.name)===norm(e.target.value) || norm(c.code)===norm(e.target.value));
+  if(exact) chosen = exact;
+  $("#goBtn").disabled = !e.target.value.trim();
+  $("#err").textContent = "";
+  renderSuggest();
+});
+$("#clubInput").addEventListener("keydown", e=>{
+  if(!sugg.length) return;
+  if(e.key==="ArrowDown"){ sel=(sel+1)%sugg.length; renderSuggest(); e.preventDefault(); }
+  else if(e.key==="ArrowUp"){ sel=(sel-1+sugg.length)%sugg.length; renderSuggest(); e.preventDefault(); }
+  else if(e.key==="Enter" && sel>=0){ choose(sugg[sel]); e.preventDefault(); }
+  else if(e.key==="Escape"){ sugg=[]; renderSuggest(); }
+});
+$("#clubInput").addEventListener("blur", ()=>setTimeout(()=>{ sugg=[]; renderSuggest(); },120));
+$("#searchForm").addEventListener("submit", e=>{
+  e.preventDefault();
+  const q = $("#clubInput").value.trim();
+  if(!chosen){
+    const r = search(q);
+    if(r.length===1 || (r.length && scoreClub(r[0],norm(q))>=80)) chosen = r[0];
+  }
+  if(chosen){ openClub(chosen); return; }
+  const r = search(q);
+  $("#err").innerHTML = r.length
+    ? `Several clubs match “${esc(q)}” — pick one from the list.`
+    : `“${esc(q)}” isn't in our database (Premier League, Serie A, LaLiga, Bundesliga, Ligue 1, 2026/27). Check the spelling or browse below.`;
+  sugg = r; renderSuggest();
+});
+
+function renderChips(){
+  const opts = [["ALL","All leagues"],...Object.entries(LEAGUES).map(([k,v])=>[k,v.name])];
+  $("#leagueChips").innerHTML = opts.map(([k,l])=>`<button class="chip" aria-pressed="${chipLg===k}" data-lg="${k}">${l}</button>`).join("");
+  $("#leagueChips").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ chipLg=b.dataset.lg; renderChips(); renderGrid(); });
+}
+function renderGrid(){
+  const list = CLUBS.filter(c=>chipLg==="ALL"||c.lg===chipLg).sort((a,b)=>a.name.localeCompare(b.name));
+  $("#clubGrid").innerHTML = list.map(c=>`<button class="club-btn" data-id="${c.id}" title="${esc(c.name)} · ${LEAGUES[c.lg].name}">${crest(c)}<span>${esc(c.name)}</span></button>`).join("");
+  $("#clubGrid").querySelectorAll(".club-btn").forEach(b=>b.onclick=()=>openClub(CLUBS.find(c=>c.id===b.dataset.id)));
+}
+renderChips(); renderGrid();
+try{ const last = localStorage.getItem("sc-last-club"); const c = CLUBS.find(x=>x.id===last); if(c){ choose(c); } }catch(e){}
+
+/* ================= APP ================= */
+const state = { club:null, style:null, window:"open", budget:60, sortKey:"pos", sortDir:1, tab:"audit", rPos:null, ePos:null, rLeague:"ALL" };
+const club = () => state.club;
 const money = v => v>=1 ? "€"+v.toFixed(1)+"M" : "€"+Math.round(v*1000)+"K";
 
+function openClub(c){
+  state.club = c; state.style = c.style; state.budget = c.budget; state.rPos = null; state.ePos = null; state.tab = "audit";
+  try{ localStorage.setItem("sc-last-club", c.id); }catch(e){}
+  $("#clubId").innerHTML = `${crest(c)}<div><b>${esc(c.name)}</b>${lgTag(c.lg)}</div>`;
+  $("#style").value = c.style; $("#budget").value = c.budget;
+  $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden");
+  switchTab("audit");
+}
+$("#switchClub").onclick = ()=>{
+  $("#app").classList.add("hidden"); $("#welcome").classList.remove("hidden");
+  $("#clubInput").value = ""; chosen = null; $("#goBtn").disabled = true; $("#clubInput").focus(); window.scrollTo(0,0);
+};
+
+function styleFit(p, style){
+  const w = STYLES[style];
+  if(p.pos==="GK") return Math.round(clamp(55 + (p.pass-55)*w.pass/4 + (p.phys-55)*w.phys/5 + 12, 30, 95));
+  return Math.round((w.press*p.press + w.pass*p.pass + w.pace*p.pace + w.phys*p.phys)/(w.press+w.pass+w.pace+w.phys));
+}
 function fitBar(v){
   const col = v>=70 ? "var(--accent)" : v>=58 ? "var(--warn)" : "var(--bad)";
   return `<span class="fit"><i><b style="width:${v}%;background:${col}"></b></i>${v}</span>`;
 }
-function ovrColor(r){ return r>=82 ? "var(--accent2)" : r>=75 ? "var(--accent)" : r>=68 ? "var(--warn)" : "var(--muted)"; }
-
-function available(pos){ return club().squad.filter(p=>p.pos===pos && !p.injured); }
-function starter(pos){ return available(pos).sort((a,b)=>b.rating-a.rating)[0]; }
+const ovrColor = r => r>=82 ? "var(--accent2)" : r>=75 ? "var(--accent)" : r>=68 ? "var(--warn)" : "var(--muted)";
+const available = pos => club().squad.filter(p=>p.pos===pos && !p.injured);
+const starter = pos => available(pos).sort((a,b)=>b.rating-a.rating)[0];
 function weakestPos(){
   let best=null, score=Infinity;
-  POS.forEach(pos=>{
-    const s = starter(pos); const depthRatio = available(pos).length/TARGET_DEPTH[pos];
-    const sc = (s?s.rating:50) + depthRatio*8;
-    if(sc<score){score=sc;best=pos;}
-  });
+  POS.forEach(pos=>{ const s=starter(pos); const sc=(s?s.rating:50)+available(pos).length/TARGET_DEPTH[pos]*8; if(sc<score){score=sc;best=pos;} });
   return best;
 }
 
-/* ---------- squad audit ---------- */
+/* ----- squad audit ----- */
 function renderKPIs(){
   const sq = club().squad;
   const total = sq.reduce((a,p)=>a+p.value,0);
   const avgAge = sq.reduce((a,p)=>a+p.age,0)/sq.length;
-  const expiring = sq.filter(p=>p.contract<=YEAR+1).length;
-  const injured = sq.filter(p=>p.injured).length;
-  const mismatch = sq.filter(p=>styleFit(p,state.style)<58).length;
   $("#kpis").innerHTML = [
-    ["Squad value", money(total)],
-    ["Average age", avgAge.toFixed(1)],
-    ["Contracts expiring ≤ "+(YEAR+1), expiring],
-    ["Long-term injuries", injured],
-    ["Style mismatches", mismatch]
+    ["Squad value", money(total)], ["Average age", avgAge.toFixed(1)],
+    ["Contracts expiring ≤ "+(YEAR+1), sq.filter(p=>p.contract<=YEAR+1).length],
+    ["Long-term injuries", sq.filter(p=>p.injured).length],
+    ["Style mismatches", sq.filter(p=>styleFit(p,state.style)<58).length]
   ].map(([l,v])=>`<div class="panel kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
 }
-
 function renderDepth(){
   $("#depth").innerHTML = POS.map(pos=>{
-    const n = available(pos).length, t = TARGET_DEPTH[pos];
-    const pct = Math.min(100, n/t*100);
+    const n = available(pos).length, t = TARGET_DEPTH[pos], s = starter(pos);
     const col = n>=t ? "var(--accent)" : n===t-1 ? "var(--warn)" : "var(--bad)";
-    const s = starter(pos);
-    return `<div class="pos" data-pos="${pos}" title="${POS_NAME[pos]}"><b>${pos}</b>
-      <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
-      <small>${n}/${t} · best ${s?s.rating:"–"}</small></div>`;
+    return `<div class="pos" data-pos="${pos}" title="${POS_NAME[pos]}"><b>${pos}</b><div class="bar"><i style="width:${Math.min(100,n/t*100)}%;background:${col}"></i></div><small>${n}/${t} · best ${s?s.rating:"–"}</small></div>`;
   }).join("");
   document.querySelectorAll(".pos").forEach(el=>el.onclick=()=>{ state.rPos = el.dataset.pos; switchTab("recruit"); });
 }
-
 function flags(p){
   const f=[];
   if(p.injured) f.push(`<span class="tag t-bad">Injured</span>`);
@@ -445,11 +580,7 @@ function flags(p){
   if(styleFit(p,state.style)<58) f.push(`<span class="tag t-bad">Style mismatch</span>`);
   return f.join("");
 }
-
-const COLS = [
-  ["name","Player"],["pos","Pos"],["age","Age","num"],["rating","OVR","num"],["potential","POT","num"],
-  ["fit","Style fit","num"],["value","Value","num"],["wage","Wage/wk","num"],["contract","Contract","num"],["flags","Flags"],["act",""]
-];
+const COLS = [["name","Player"],["pos","Pos"],["age","Age","num"],["rating","OVR","num"],["potential","POT","num"],["fit","Style fit","num"],["value","Value","num"],["wage","Wage/wk","num"],["contract","Contract","num"],["flags","Flags"],["act",""]];
 function renderRoster(){
   const rows = club().squad.map(p=>({...p, fit:styleFit(p,state.style)}));
   const k = state.sortKey;
@@ -460,84 +591,70 @@ function renderRoster(){
   });
   $("#roster").innerHTML = `<thead><tr>${COLS.map(([key,l,c])=>`<th class="${c||""}" data-k="${key}">${l}${state.sortKey===key?(state.sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
   <tbody>${rows.map(p=>`<tr class="${p.injured?"injured":""}" data-id="${p.id}">
-    <td><b>${p.name}</b></td><td>${p.pos}</td><td class="num">${p.age}</td>
+    <td><b>${esc(p.name)}</b></td><td>${p.pos}</td><td class="num">${p.age}</td>
     <td class="num" style="color:${ovrColor(p.rating)};font-weight:600">${p.rating}</td><td class="num">${p.potential}</td>
     <td class="num">${fitBar(p.fit)}</td>
     <td class="num val">${money(p.value)} <span class="${p.trend>0?"up":p.trend<0?"down":""}">${p.trend>0?"▲":p.trend<0?"▼":""}</span></td>
-    <td class="num">€${p.wage}k</td><td class="num">${p.contract}</td>
-    <td>${flags(p)}</td>
-    <td><button class="btn ${p.injured?"":"danger"}" data-inj="${p.id}">${p.injured?"Mark fit":"Injure"}</button></td>
-  </tr>`).join("")}</tbody>`;
+    <td class="num">€${p.wage}k</td><td class="num">${p.contract}</td><td>${flags(p)}</td>
+    <td><button class="btn ${p.injured?"":"danger"}" data-inj="${p.id}">${p.injured?"Mark fit":"Injure"}</button></td></tr>`).join("")}</tbody>`;
   document.querySelectorAll("#roster th").forEach(th=>th.onclick=()=>{
     const key=th.dataset.k; if(key==="flags"||key==="act") return;
-    if(state.sortKey===key) state.sortDir*=-1; else {state.sortKey=key; state.sortDir = (key==="name"||key==="pos")?1:-1;}
+    if(state.sortKey===key) state.sortDir*=-1; else { state.sortKey=key; state.sortDir=(key==="name"||key==="pos")?1:-1; }
     renderRoster();
   });
   document.querySelectorAll("[data-inj]").forEach(b=>b.onclick=()=>{
     const p = club().squad.find(x=>x.id===b.dataset.inj);
-    p.injured = !p.injured;
-    if(p.injured){ state.ePos = p.pos; }
+    p.injured = !p.injured; if(p.injured) state.ePos = p.pos;
     renderAll();
   });
 }
 
-/* ---------- recruitment ---------- */
-function card(p, right, why){
-  return `<div class="card">
-    <div class="ovr" style="color:${ovrColor(p.rating)}">${p.rating}</div>
-    <div><h3>${p.name}</h3>
-      <div class="meta">${p.pos} · ${p.age} yrs · POT ${p.potential} · ${p.club}</div>
-      <div class="why">${why}</div></div>
+/* ----- recruitment ----- */
+function card(p, sub, right, why){
+  return `<div class="card"><div class="ovr" style="color:${ovrColor(p.rating)}">${p.rating}</div>
+    <div><h3>${esc(p.name)}</h3><div class="meta">${sub}</div><div class="why">${why}</div></div>
     <div class="right">${right}</div></div>`;
 }
-
 function renderRecruit(){
   if(!state.rPos) state.rPos = weakestPos();
   $("#rPos").innerHTML = POS.map(p=>`<option value="${p}" ${p===state.rPos?"selected":""}>${p} — ${POS_NAME[p]}</option>`).join("");
-  const s = starter(state.rPos);
-  const sRating = s ? s.rating : 0;
-  $("#starterBox").innerHTML = s ? `<b style="color:var(--text)">${s.name}</b> · OVR ${s.rating} · ${s.age} yrs` : `<span style="color:var(--bad)">No fit player available</span>`;
+  $("#rLeague").innerHTML = [["ALL","All top 5 leagues"],...Object.entries(LEAGUES).map(([k,v])=>[k,v.name])].map(([k,l])=>`<option value="${k}" ${k===state.rLeague?"selected":""}>${l}</option>`).join("");
+  const s = starter(state.rPos), sR = s ? s.rating : 0;
+  $("#starterBox").innerHTML = s ? `Current ${POS_NAME[state.rPos].toLowerCase()} starter: <b style="color:var(--text)">${esc(s.name)}</b> · OVR ${s.rating} · ${s.age} yrs` : `<span style="color:var(--bad)">No fit ${POS_NAME[state.rPos].toLowerCase()} available</span>`;
   $("#youngFeeVal").textContent = "€"+$("#youngFee").value+"M";
+  $("#recruitNote").innerHTML = state.window==="closed"
+    ? `<p>⛔ <b>Transfer window closed.</b> These lists are for planning the next window. For urgent cover use <b>Emergency Free Agents</b>.</p><button class="btn primary" onclick="switchTab('emergency')">Go to free agents</button>`
+    : `<p>Targets for <b>${POS_NAME[state.rPos]}</b> from ${CLUBS.length-1} clubs, under a <b>${state.style}</b> manager (${STYLES[state.style].desc}). Budget: <b>€${state.budget}M</b>.</p>`;
 
-  const closed = state.window==="closed";
-  $("#recruitWindowNote").innerHTML = closed
-    ? `<p>⛔ <b>Transfer window closed.</b> Lists below are for planning the next window. For urgent cover, use <b>Emergency Free Agents</b>.</p><button class="btn primary" onclick="switchTab('emergency')">Go to free agents</button>`
-    : `<p>Recommendations for <b>${POS_NAME[state.rPos]}</b> under a <b>${state.style}</b> manager (${STYLES[state.style].desc}). Budget: <b>€${state.budget}M</b>.</p>`;
+  const pool = ALL_PLAYERS.filter(p=>p.pos===state.rPos && p.clubId!==club().id && (state.rLeague==="ALL"||p.lg===state.rLeague))
+    .map(p=>({...p, fit:styleFit(p,state.style)}));
+  const sub = p => `${p.pos} · ${p.age} yrs · POT ${p.potential} · ${esc(p.club)} ${lgTag(p.lg)}`;
+  const price = p => `<div class="price">${money(p.value)}</div><div class="meta">€${p.wage}k/wk</div>`;
 
-  const pool = MARKET.filter(p=>p.pos===state.rPos).map(p=>({...p, fit:styleFit(p,state.style)}));
-
-  const up = pool.filter(p=>p.rating>sRating && p.value<=state.budget)
-    .sort((a,b)=>(b.rating*2+b.fit*0.5)-(a.rating*2+a.fit*0.5)).slice(0,5);
-  $("#upgradeList").innerHTML = up.length ? up.map(p=>card(p,
-      `<div class="price">${money(p.value)}</div><div class="meta">€${p.wage}k/wk</div>`,
-      `<span class="tag t-ok">+${p.rating-sRating} OVR vs starter</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit} · ${state.style}</span>`
-    )).join("")
+  const up = pool.filter(p=>p.rating>sR && p.value<=state.budget)
+    .sort((a,b)=>(b.rating*2+b.fit*0.5)-(a.rating*2+a.fit*0.5)).slice(0,6);
+  $("#upgradeList").innerHTML = up.length ? up.map(p=>card(p, sub(p), price(p),
+      `<span class="tag t-ok">+${p.rating-sR} OVR vs starter</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit} · ${state.style}</span>`)).join("")
     : `<div class="empty">No player beats your starter within €${state.budget}M. Try raising the budget.</div>`;
 
   const maxAge = +$("#youngAge").value, cap = +$("#youngFee").value;
-  const young = pool.filter(p=>p.age<=maxAge && p.value<=cap && p.potential>=sRating)
-    .sort((a,b)=>(b.potential*2+b.fit*0.4)-(a.potential*2+a.fit*0.4)).slice(0,5);
-  $("#youngList").innerHTML = young.length ? young.map(p=>card(p,
-      `<div class="price">${money(p.value)}</div><div class="meta">€${p.wage}k/wk</div>`,
-      `<span class="tag t-info">Ceiling ${p.potential}</span>${s && s.age>=29 ? `<span class="tag t-warn">Successor to ${s.name.split(" ")[1]} (${s.age})</span>` : ""}<span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`
-    )).join("")
-    : `<div class="empty">No young player with potential ≥ ${sRating} under €${cap}M. Try a higher fee cap or age.</div>`;
+  const young = pool.filter(p=>p.age<=maxAge && p.value<=cap && p.potential>=sR)
+    .sort((a,b)=>(b.potential*2+b.fit*0.4)-(a.potential*2+a.fit*0.4)).slice(0,6);
+  $("#youngList").innerHTML = young.length ? young.map(p=>card(p, sub(p), price(p),
+      `<span class="tag t-info">Ceiling ${p.potential}</span>${s && s.age>=29 ? `<span class="tag t-warn">Successor to ${esc(s.name.split(" ").slice(-1)[0])} (${s.age})</span>` : ""}<span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`)).join("")
+    : `<div class="empty">No young player with potential ≥ ${sR} under €${cap}M. Try a higher fee cap or age.</div>`;
 }
 
-/* ---------- emergency free agents ---------- */
+/* ----- emergency free agents ----- */
 function renderEmergency(){
   const injured = club().squad.filter(p=>p.injured);
-  const badge = $("#injBadge");
-  badge.textContent = injured.length; badge.classList.toggle("hidden", !injured.length);
-
+  $("#injBadge").textContent = injured.length; $("#injBadge").classList.toggle("hidden", !injured.length);
   if(!state.ePos) state.ePos = injured[0]?.pos || weakestPos();
   $("#ePos").innerHTML = POS.map(p=>`<option value="${p}" ${p===state.ePos?"selected":""}>${p} — ${POS_NAME[p]}</option>`).join("");
-
   const ref = injured.find(p=>p.pos===state.ePos);
   $("#emergencyAlert").innerHTML = injured.length
-    ? `<div class="alert"><p>🚨 <b>${injured.length} long-term injur${injured.length>1?"ies":"y"}:</b> ${injured.map(p=>`${p.name} (${p.pos}, OVR ${p.rating})`).join(", ")}. ${state.window==="closed"?"Window is closed — only free agents can be signed.":"Window is open, but free agents are the fastest, cheapest cover."}</p></div>`
-    : `<div class="alert info"><p>No injuries right now. Go to <b>Squad Audit</b> and press <b>Injure</b> on a player to simulate a crisis — this list updates automatically.</p></div>`;
-
+    ? `<div class="alert"><p>🚨 <b>${injured.length} long-term injur${injured.length>1?"ies":"y"}:</b> ${injured.map(p=>`${esc(p.name)} (${p.pos}, OVR ${p.rating})`).join(", ")}. ${state.window==="closed"?"Window is closed — only free agents can be signed.":"Window is open, but free agents are the fastest, cheapest cover."}</p></div>`
+    : `<div class="alert info"><p>No injuries right now. In <b>Squad Audit</b>, press <b>Injure</b> on a player to simulate a crisis — this list updates automatically.</p></div>`;
   const maxWage = +$("#wage").value, allowUnfit = $("#unfit").checked;
   const target = ref ? ref.rating : (starter(state.ePos)?.rating || 70);
   const list = FREE_AGENTS.filter(p=>p.pos===state.ePos && p.wage<=maxWage && (allowUnfit || p.fitness==="Match fit"))
@@ -545,89 +662,74 @@ function renderEmergency(){
     .sort((a,b)=>(b.rating*1.5+b.fit*0.6-Math.abs(b.rating-target)*0.3)-(a.rating*1.5+a.fit*0.6-Math.abs(a.rating-target)*0.3));
   $("#faCount").textContent = list.length+" found";
   $("#faList").innerHTML = list.length ? list.map(p=>{
-    const diff = p.rating-target;
-    const fitTag = p.fitness==="Match fit" ? "t-ok" : "t-warn";
-    return card({...p, club:"ex-"+p.lastClub},
+    const d = p.rating-target;
+    return card(p, `${p.pos} · ${p.age} yrs · last club: ${esc(p.lastClub)}`,
       `<div class="price">€${p.wage}k<span class="meta">/wk</span></div><div class="meta">No fee</div>`,
-      `<span class="tag ${fitTag}">${p.fitness}</span><span class="tag ${diff>=0?"t-ok":"t-warn"}">${diff>=0?"+":""}${diff} vs ${ref?"injured player":"starter"}</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`);
+      `<span class="tag ${p.fitness==="Match fit"?"t-ok":"t-warn"}">${p.fitness}</span><span class="tag ${d>=0?"t-ok":"t-warn"}">${d>=0?"+":""}${d} vs ${ref?"injured player":"starter"}</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`);
   }).join("") : `<div class="empty">No free agents match. Raise the wage bracket or include players who aren't fully fit.</div>`;
 }
 
-/* ---------- offload planner ---------- */
+/* ----- offload planner ----- */
+function needsAt(c, pos, rating){
+  const s = c.squad.filter(p=>p.pos===pos).sort((a,b)=>b.rating-a.rating);
+  return s.length < TARGET_DEPTH[pos] || (s[0] && s[0].rating < rating + 2);
+}
 function renderOffload(){
   const changed = state.style !== club().style;
-  $("#offloadIntro").innerHTML = `Players who fit poorly in a <b>${state.style}</b> system (${STYLES[state.style].desc}), with rival clubs whose style, needs and budget match them. ${changed?`<b>Manager change detected:</b> ${club().style} → ${state.style}.`:"Tip: change the manager playstyle above to see who becomes surplus."}`;
+  $("#offloadIntro").innerHTML = `Players who fit poorly in a <b>${state.style}</b> system (${STYLES[state.style].desc}), matched to clubs across the top 5 leagues whose style, squad needs and budget suit them. ${changed?`<b>Manager change:</b> ${club().style} → ${state.style}.`:"Tip: change the manager playstyle above to see who becomes surplus."}`;
   const out = club().squad.filter(p=>!p.injured).map(p=>({...p, fit:styleFit(p,state.style)}))
     .filter(p=>p.fit<60 && !(p.age<=21 && p.potential-p.rating>=8)).sort((a,b)=>a.fit-b.fit).slice(0,8);
   $("#offloadList").innerHTML = out.length ? out.map(p=>{
-    const buyers = BUYERS.map(b=>{
-      const f = styleFit(p,b.style);
-      const need = b.needs.includes(p.pos);
-      const afford = b.budget >= p.value;
-      const score = Math.round(f*0.7 + (need?20:0) + (afford?10:-25));
-      return {...b, f, need, afford, score};
-    }).filter(b=>b.f>p.fit && b.afford).sort((a,b)=>b.score-a.score).slice(0,3);
-    return card({...p, club:club().name},
+    const buyers = CLUBS.filter(c=>c.id!==club().id && c.budget>=p.value).map(c=>{
+      const f = styleFit(p,c.style), need = needsAt(c,p.pos,p.rating);
+      return {c, f, need, score: f*0.7 + (need?25:0) - Math.abs(c.str-p.rating)*0.8};
+    }).filter(b=>b.f>p.fit).sort((a,b)=>b.score-a.score).slice(0,3);
+    return card(p, `${p.pos} · ${p.age} yrs · POT ${p.potential}`,
       `<div class="price">${money(p.value)}</div><div class="meta">asking price</div>`,
       `<span class="tag t-bad">Fit ${p.fit} in ${state.style}</span>${flags(p)}
-       <div class="buyers">${buyers.length ? buyers.map(b=>`<span class="buyer">${b.name} · ${b.style} · fit <b>${b.f}</b>${b.need?" · needs "+p.pos:""}</span>`).join("") : `<span class="buyer">No buyer can afford ${money(p.value)} — consider a loan</span>`}</div>`);
+       <div class="buyers">${buyers.length ? buyers.map(b=>`<span class="buyer">${esc(b.c.name)} ${lgTag(b.c.lg)} · ${b.c.style} · fit <b>${b.f}</b>${b.need?" · needs "+p.pos:""}</span>`).join("") : `<span class="buyer">No suitable buyer can afford ${money(p.value)} — consider a loan</span>`}</div>`);
   }).join("") : `<div class="empty">Every available player fits the ${state.style} system reasonably well. Nothing to offload.</div>`;
 }
 
-/* ---------- tabs & wiring ---------- */
+/* ----- wiring ----- */
 function switchTab(t){
   state.tab = t;
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
   ["audit","recruit","emergency","offload"].forEach(x=>$("#tab-"+x).classList.toggle("hidden", x!==t));
-  renderAll();
-  window.scrollTo({top:0,behavior:"smooth"});
+  renderAll(); window.scrollTo({top:0});
 }
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
-
 function renderAll(){
+  if(!club()) return;
   $("#budgetVal").textContent = "€"+state.budget+"M";
   renderKPIs(); renderDepth(); renderRoster(); renderRecruit(); renderEmergency(); renderOffload();
 }
-
-$("#club").innerHTML = CLUBS.map((c,i)=>`<option value="${i}">${c.name}</option>`).join("");
 $("#style").innerHTML = Object.keys(STYLES).map(s=>`<option>${s}</option>`).join("");
-$("#style").value = state.style;
-$("#club").onchange = e=>{ state.club=+e.target.value; state.style=club().style; $("#style").value=state.style; state.rPos=null; state.ePos=null; renderAll(); };
 $("#style").onchange = e=>{ state.style=e.target.value; renderAll(); };
 $("#window").onchange = e=>{ state.window=e.target.value; renderAll(); };
 $("#budget").oninput = e=>{ state.budget=+e.target.value; renderAll(); };
 $("#rPos").onchange = e=>{ state.rPos=e.target.value; renderRecruit(); };
+$("#rLeague").onchange = e=>{ state.rLeague=e.target.value; renderRecruit(); };
 $("#youngAge").onchange = renderRecruit;
 $("#youngFee").oninput = renderRecruit;
 $("#ePos").onchange = e=>{ state.ePos=e.target.value; renderEmergency(); };
 $("#wage").onchange = renderEmergency;
 $("#unfit").onchange = renderEmergency;
 
-/* ---------- simulated live valuation feed ---------- */
-function tick(){
-  $("#clock").textContent = new Date().toLocaleTimeString();
-}
-setInterval(tick,1000); tick();
+/* simulated live valuation feed */
+setInterval(()=>{ $("#clock").textContent = new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}); },1000);
 setInterval(()=>{
-  const sq = club().squad;
-  const moved = [];
+  if(!club()) return;
+  const sq = club().squad, moved = [];
   for(let i=0;i<3;i++){
-    const p = sq[Math.floor(Math.random()*sq.length)];
-    const pct = (Math.random()*3-1.5)/100;
-    p.value = Math.max(0.3, Math.round(p.value*(1+pct)*10)/10);
-    p.trend = pct>0?1:-1; moved.push(p.id);
+    const p = sq[Math.floor(Math.random()*sq.length)], pct = (Math.random()*3-1.5)/100;
+    p.value = Math.max(0.3, Math.round(p.value*(1+pct)*10)/10); p.trend = pct>0?1:-1; moved.push(p);
   }
   if(state.tab==="audit"){
     renderKPIs(); renderRoster();
-    moved.forEach(id=>{
-      const p = sq.find(x=>x.id===id);
-      const cell = document.querySelector(`tr[data-id="${id}"] .val`);
-      if(cell) cell.classList.add(p.trend>0?"flash-up":"flash-down");
-    });
+    moved.forEach(p=>{ const cell=document.querySelector(`tr[data-id="${p.id}"] .val`); if(cell) cell.classList.add(p.trend>0?"flash-up":"flash-down"); });
   }
 }, 6000);
-
-renderAll();
 </script>
 </body>
 </html>
