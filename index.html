@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SquadCraft · TransferMind</title>
+<meta name="description" content="SquadCraft TransferMind — football transfer intelligence prototype: squad audit, recruitment recommendations, emergency free agents and offload planner.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1210; --panel:#121c19; --panel2:#18241f; --line:#25352f;
+    --text:#e7efe9; --muted:#8fa39a; --accent:#3ddc84; --accent2:#c6f432;
+    --warn:#ffb547; --bad:#ff5d5d; --info:#5cc8ff;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.45}
+  h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;margin:0;letter-spacing:-.01em}
+  button,select,input{font:inherit;color:inherit}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+
+  /* header */
+  header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,#0f1a16,#0b1210)}
+  .top{display:flex;align-items:center;gap:14px;padding:16px 0;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-mark{width:36px;height:36px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#062;font-weight:700;font-family:"Space Grotesk"}
+  .logo h1{font-size:20px}
+  .logo small{display:block;color:var(--muted);font-size:12px}
+  .spacer{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);font-size:12px;color:var(--muted);background:var(--panel)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:pulse 2s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+
+  /* controls */
+  .controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 0 16px}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px}
+  select,input[type=number]{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px}
+  select:focus,input:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+
+  /* tabs */
+  nav.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin-top:4px}
+  .tab{background:none;border:0;padding:12px 14px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-weight:500}
+  .tab[aria-selected=true]{color:var(--text);border-color:var(--accent)}
+  .tab .badge{background:var(--bad);color:#fff;border-radius:99px;font-size:11px;padding:1px 7px;margin-left:6px}
+
+  main.wrap{padding-top:22px;padding-bottom:60px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+  .grid{display:grid;gap:14px}
+  .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .kpi .v{font-family:"Space Grotesk";font-size:24px;font-weight:600;margin-top:4px}
+  .kpi .l{color:var(--muted);font-size:12px}
+  .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .side{grid-template-columns:320px minmax(0,1fr)}
+  .section-title{display:flex;align-items:baseline;gap:10px;margin:22px 0 10px}
+  .section-title h2{font-size:17px}
+  .section-title p{margin:0;color:var(--muted);font-size:13px}
+
+  /* depth chart */
+  .depth{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px}
+  .pos{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center;cursor:pointer;transition:border-color .15s}
+  .pos:hover{border-color:var(--accent)}
+  .pos b{font-family:"Space Grotesk";font-size:15px;display:block}
+  .pos .bar{height:6px;background:#0c1512;border-radius:4px;margin:8px 0 6px;overflow:hidden}
+  .pos .bar i{display:block;height:100%;border-radius:4px}
+  .pos small{color:var(--muted);font-size:11px}
+
+  /* tables */
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius)}
+  table{width:100%;border-collapse:collapse;min-width:760px}
+  th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel2);cursor:pointer;user-select:none;position:sticky;top:0}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:#15211c}
+  tr.injured td{opacity:.55}
+  .tag{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;margin-right:4px;font-weight:500}
+  .t-bad{background:rgba(255,93,93,.15);color:var(--bad)}
+  .t-warn{background:rgba(255,181,71,.15);color:var(--warn)}
+  .t-ok{background:rgba(61,220,132,.13);color:var(--accent)}
+  .t-info{background:rgba(92,200,255,.13);color:var(--info)}
+  .fit{display:inline-flex;align-items:center;gap:6px}
+  .fit i{width:46px;height:5px;background:#0c1512;border-radius:3px;overflow:hidden;display:inline-block}
+  .fit i b{display:block;height:100%}
+  .up{color:var(--accent)} .down{color:var(--bad)}
+  .flash-up{animation:fu 1.2s} .flash-down{animation:fd 1.2s}
+  @keyframes fu{0%{background:rgba(61,220,132,.3)}100%{background:transparent}}
+  @keyframes fd{0%{background:rgba(255,93,93,.3)}100%{background:transparent}}
+
+  .btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#04210f;border-color:var(--accent);font-weight:600}
+  .btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+
+  /* cards */
+  .cards{display:grid;gap:10px}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center}
+  .ovr{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font-family:"Space Grotesk";font-weight:700;font-size:17px;background:#0c1512;border:1px solid var(--line)}
+  .card h3{font-size:15px}
+  .meta{color:var(--muted);font-size:12px}
+  .card .right{text-align:right}
+  .card .price{font-family:"Space Grotesk";font-weight:600;font-size:16px}
+  .why{margin-top:5px}
+  .empty{color:var(--muted);padding:24px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+  .col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .col-head h3{font-size:15px}
+
+  .alert{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,93,93,.4);background:rgba(255,93,93,.08);margin-bottom:16px;flex-wrap:wrap}
+  .alert.info{border-color:rgba(92,200,255,.35);background:rgba(92,200,255,.07)}
+  .alert p{margin:0;flex:1;min-width:220px}
+
+  .buyers{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .buyer{font-size:12px;padding:4px 8px;border-radius:8px;background:#0c1512;border:1px solid var(--line)}
+  .buyer b{color:var(--accent)}
+
+  .hidden{display:none}
+  footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding:18px 0 30px}
+  .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px;cursor:pointer}
+
+  @media (max-width:900px){
+    .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .two,.side{grid-template-columns:minmax(0,1fr)}
+    .depth{grid-template-columns:repeat(4,minmax(0,1fr))}
+  }
+  @media (max-width:520px){
+    .controls{grid-template-columns:minmax(0,1fr)}
+    .card{grid-template-columns:40px minmax(0,1fr)}
+    .card .right{grid-column:1/-1;text-align:left;display:flex;gap:10px;align-items:center}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo">
+        <div class="logo-mark">SC</div>
+        <div><h1>SquadCraft</h1><small>TransferMind · transfer intelligence prototype</small></div>
+      </div>
+      <div class="spacer"></div>
+      <span class="pill"><span class="dot"></span>Live valuations (simulated) · <span id="clock">--:--:--</span></span>
+      <span class="pill">🔒 Club data stays in your browser</span>
+    </div>
+
+    <div class="controls">
+      <div class="field">
+        <label for="club">Your club</label>
+        <select id="club"></select>
+      </div>
+      <div class="field">
+        <label for="style">Manager playstyle</label>
+        <select id="style"></select>
+      </div>
+      <div class="field">
+        <label for="window">Transfer window</label>
+        <select id="window">
+          <option value="open">Open</option>
+          <option value="closed">Closed (post-deadline)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="budget">Transfer budget: <span id="budgetVal"></span></label>
+        <input type="range" id="budget" min="5" max="150" step="5" value="60">
+      </div>
+    </div>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="audit" aria-selected="true">Squad Audit</button>
+      <button class="tab" role="tab" data-tab="recruit" aria-selected="false">Recruitment</button>
+      <button class="tab" role="tab" data-tab="emergency" aria-selected="false">Emergency Free Agents<span id="injBadge" class="badge hidden">0</span></button>
+      <button class="tab" role="tab" data-tab="offload" aria-selected="false">Offload Planner</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- SQUAD AUDIT -->
+  <section id="tab-audit">
+    <div class="grid kpis" id="kpis"></div>
+
+    <div class="section-title"><h2>Depth by position</h2><p>Available players vs. target depth · click a position to scout it</p></div>
+    <div class="depth" id="depth"></div>
+
+    <div class="section-title"><h2>Roster &amp; valuations</h2><p>Click headers to sort · mark a long-term injury to trigger the emergency engine</p></div>
+    <div class="table-wrap"><table id="roster"></table></div>
+  </section>
+
+  <!-- RECRUITMENT -->
+  <section id="tab-recruit" class="hidden">
+    <div class="alert info" id="recruitWindowNote"></div>
+    <div class="grid controls" style="padding:0;margin-bottom:16px">
+      <div class="field">
+        <label for="rPos">Position</label>
+        <select id="rPos"></select>
+      </div>
+      <div class="field">
+        <label for="youngAge">Future-proof max age</label>
+        <select id="youngAge"><option>21</option><option selected>23</option><option>25</option></select>
+      </div>
+      <div class="field">
+        <label for="youngFee">Future-proof fee cap: <span id="youngFeeVal"></span></label>
+        <input type="range" id="youngFee" min="5" max="80" step="5" value="30">
+      </div>
+      <div class="field">
+        <label>Current starter</label>
+        <div id="starterBox" class="meta" style="padding:9px 0"></div>
+      </div>
+    </div>
+    <div class="grid two">
+      <div class="panel">
+        <div class="col-head"><h3>⚡ Immediate Upgrade</h3><span class="meta">Outperforms starter · within budget</span></div>
+        <div class="cards" id="upgradeList"></div>
+      </div>
+      <div class="panel">
+        <div class="col-head"><h3>🌱 Future-Proof Potential</h3><span class="meta">High ceiling · under fee cap</span></div>
+        <div class="cards" id="youngList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- EMERGENCY -->
+  <section id="tab-emergency" class="hidden">
+    <div id="emergencyAlert"></div>
+    <div class="grid side">
+      <div class="panel">
+        <h3 style="font-size:15px;margin-bottom:12px">Search filters</h3>
+        <div class="field" style="margin-bottom:12px">
+          <label for="ePos">Position needed</label>
+          <select id="ePos"></select>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <label for="wage">Max wage bracket</label>
+          <select id="wage">
+            <option value="25">Up to €25k / week</option>
+            <option value="50" selected>Up to €50k / week</option>
+            <option value="100">Up to €100k / week</option>
+            <option value="999">Any wage</option>
+          </select>
+        </div>
+        <label class="check"><input type="checkbox" id="unfit"> Include players not fully match-fit</label>
+        <p class="meta" style="margin-top:14px">Free agents can be signed outside the transfer window. Ranked by match to the injured player's level and your manager's playstyle.</p>
+      </div>
+      <div class="panel">
+        <div class="col-head"><h3>🚑 Unattached players</h3><span class="meta" id="faCount"></span></div>
+        <div class="cards" id="faList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OFFLOAD -->
+  <section id="tab-offload" class="hidden">
+    <div class="alert info"><p id="offloadIntro"></p></div>
+    <div class="cards" id="offloadList"></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    SquadCraft — ISE4133 Software Engineering prototype · Team: Rakhmatullaev Umid, Abdullaev Umrbek, Igamberdiev Fazliddin.<br>
+    All clubs, players and values are fictional demo data generated in the browser. Recommendations come from a transparent scoring model, not real scouting.
+  </div>
+</footer>
+
+<script>
+/* ---------- seeded random so data is stable on every load ---------- */
+let seed = 20260922;
+function rnd(){ seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }
+const ri = (a,b) => Math.floor(rnd()*(b-a+1))+a;
+const pick = arr => arr[Math.floor(rnd()*arr.length)];
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+/* ---------- reference data ---------- */
+const POS = ["GK","CB","FB","DM","CM","AM","W","ST"];
+const POS_NAME = {GK:"Goalkeeper",CB:"Centre-back",FB:"Full-back",DM:"Def. midfield",CM:"Central mid",AM:"Attacking mid",W:"Winger",ST:"Striker"};
+const TARGET_DEPTH = {GK:2,CB:4,FB:4,DM:2,CM:3,AM:2,W:4,ST:3};
+const STYLES = {
+  "High-Press":   {press:3,  pass:1,  pace:2,  phys:1,   desc:"intense pressing, quick transitions"},
+  "Possession":   {press:1,  pass:3,  pace:1,  phys:0.5, desc:"short passing, control of the ball"},
+  "Counter-Attack":{press:0.5,pass:1, pace:3,  phys:1.5, desc:"deep block, fast breaks"},
+  "Low-Block":    {press:0.5,pass:0.5,pace:1,  phys:3,   desc:"compact defending, physical duels"}
+};
+const FIRST = ["Luca","Mateo","Jonas","Kai","Rafael","Tomas","Ilyas","Noah","Emre","Bruno","Sami","Viktor","Andre","Felix","Diego","Oskar","Malik","Hugo","Nikola","Aziz","Leon","Pablo","Elias","Timur","Yusuf","Marco","Kenji","Theo","Adrien","Bilal","Dario","Erik","Jamal","Lars","Omar","Rui","Stefan","Ivo","Nico","Amir"];
+const LAST = ["Varga","Moreau","Kovac","Lindqvist","Okafor","Santos","Bauer","Rahimov","Petrov","Costa","Haddad","Novak","Fischer","Silva","Mendes","Dragan","Larsen","Tanaka","Ruiz","Kurt","Nordin","Abiola","Ferreira","Holm","Ivanov","Rossi","Duarte","Yilmaz","Berg","Laurent","Mensah","Sato","Kral","Vidal","Weber","Aliyev","Nyberg","Correia","Hassan","Brandt"];
+const YEAR = 2026;
+
+let usedNames = new Set();
+function name(){ let n; do { n = pick(FIRST)+" "+pick(LAST); } while(usedNames.has(n)); usedNames.add(n); return n; }
+
+/* attribute bias by position so styles affect positions differently */
+const POS_BIAS = {
+  GK:{press:-15,pass:0,pace:-10,phys:10}, CB:{press:0,pass:-5,pace:-5,phys:12},
+  FB:{press:5,pass:0,pace:10,phys:0},     DM:{press:5,pass:5,pace:-5,phys:8},
+  CM:{press:5,pass:10,pace:0,phys:0},     AM:{press:0,pass:12,pace:5,phys:-8},
+  W:{press:3,pass:0,pace:14,phys:-8},     ST:{press:2,pass:-3,pace:6,phys:8}
+};
+
+function valueOf(p){
+  let base = Math.exp((p.rating-60)/6.2)*0.7;
+  let age = p.age<=21 ? 1.25+(p.potential-p.rating)/18 : p.age<=26 ? 1.2 : p.age<=29 ? 1.0 : p.age<=31 ? 0.65 : 0.35;
+  let yearsLeft = p.contract - YEAR;
+  let c = yearsLeft<=0 ? 0.55 : yearsLeft===1 ? 0.8 : 1;
+  return Math.max(0.3, Math.round(base*age*c*10)/10);
+}
+
+function makePlayer(pos, level, opts={}){
+  const age = opts.age ?? ri(18,34);
+  const rating = clamp(Math.round(level + ri(-6,6) - (age<21?ri(2,7):0) - (age>32?ri(0,4):0)), 55, 91);
+  const potential = age<=23 ? clamp(rating + ri(4,14), rating, 93) : age<=27 ? rating + ri(0,3) : rating;
+  const b = POS_BIAS[pos];
+  const attr = k => clamp(ri(40,85) + b[k] + (age>30 && (k==="pace"||k==="press") ? -ri(5,15) : 0), 25, 96);
+  const p = {
+    id: Math.random().toString(36).slice(2,9), name:name(), pos, age, rating, potential,
+    press:attr("press"), pass:attr("pass"), pace:attr("pace"), phys:attr("phys"),
+    contract: opts.contract ?? YEAR + ri(0,5),
+    wage: opts.wage ?? Math.round(Math.exp((rating-60)/9)*6),
+    injured:false, trend:0, ...opts
+  };
+  p.value = valueOf(p);
+  return p;
+}
+
+function styleFit(p, style){
+  const w = STYLES[style];
+  if(p.pos==="GK"){ /* keepers judged on distribution + presence only */
+    return Math.round(clamp(55 + (p.pass-55)*w.pass/4 + (p.phys-55)*w.phys/5 + 12, 30, 95));
+  }
+  const sum = w.press*p.press + w.pass*p.pass + w.pace*p.pace + w.phys*p.phys;
+  return Math.round(sum/(w.press+w.pass+w.pace+w.phys));
+}
+
+/* ---------- build the demo world ---------- */
+const CLUBS = [
+  {name:"Northbridge FC", level:78, style:"Possession"},
+  {name:"Real Costa Azul", level:80, style:"High-Press"},
+  {name:"Athletic Varenna", level:75, style:"Counter-Attack"},
+  {name:"Dynamo Kestrel", level:73, style:"Low-Block"}
+];
+CLUBS.forEach(c=>{
+  c.squad = [];
+  POS.forEach(pos=>{ for(let i=0;i<TARGET_DEPTH[pos];i++) c.squad.push(makePlayer(pos, c.level - (i>=Math.ceil(TARGET_DEPTH[pos]/2)?5:0))); });
+});
+/* make the audit interesting: thin one position per club */
+CLUBS[0].squad = CLUBS[0].squad.filter((p,i,arr)=>!(p.pos==="CB" && arr.filter(x=>x.pos==="CB").indexOf(p)===3));
+CLUBS[2].squad = CLUBS[2].squad.filter((p,i,arr)=>!(p.pos==="ST" && arr.filter(x=>x.pos==="ST").indexOf(p)===2));
+
+const BUYERS = [
+  {name:"Sporting Lumen",style:"Counter-Attack",budget:25,needs:["W","ST","FB"]},
+  {name:"FC Halden",style:"Low-Block",budget:15,needs:["CB","DM","GK"]},
+  {name:"Olympique Saréa",style:"Possession",budget:40,needs:["CM","AM","FB"]},
+  {name:"Racing Montclair",style:"High-Press",budget:35,needs:["W","CM","ST"]},
+  {name:"Inter Valtora",style:"Possession",budget:60,needs:["DM","CB","AM"]},
+  {name:"Celtic Moraine",style:"Low-Block",budget:12,needs:["ST","CB","FB"]},
+  {name:"Union Brasova",style:"Counter-Attack",budget:20,needs:["CB","W","DM"]},
+  {name:"Atlético Pirena",style:"High-Press",budget:50,needs:["FB","AM","GK"]},
+  {name:"Viking Askeløy",style:"Low-Block",budget:10,needs:["GK","DM","ST"]},
+  {name:"Hapoel Tamar",style:"Possession",budget:18,needs:["CM","W","CB"]}
+];
+
+const MARKET = [];
+POS.forEach(pos=>{
+  for(let i=0;i<5;i++) MARKET.push(makePlayer(pos, ri(78,88), {club:pick(BUYERS).name, age:ri(22,31)}));
+  for(let i=0;i<5;i++) MARKET.push(makePlayer(pos, ri(66,74), {club:pick(BUYERS).name, age:ri(17,22)}));
+});
+
+const FITNESS = ["Match fit","Match fit","Match fit","Lacks match sharpness","Recovering (2–3 wks)"];
+const FREE_AGENTS = [];
+POS.forEach(pos=>{
+  for(let i=0;i<4;i++){
+    const age = ri(25,35);
+    const fa = makePlayer(pos, ri(66,80), {age, contract:YEAR, club:"Free agent"});
+    fa.wage = Math.round(fa.wage * (0.6 + rnd()*0.9));
+    fa.fitness = pick(FITNESS);
+    fa.lastClub = pick(BUYERS).name;
+    fa.value = 0;
+    FREE_AGENTS.push(fa);
+  }
+});
+
+/* ---------- state ---------- */
+const $ = s => document.querySelector(s);
+const state = { club:0, style:CLUBS[0].style, window:"open", budget:60, sortKey:"pos", sortDir:1, tab:"audit", rPos:null, ePos:null };
+const club = () => CLUBS[state.club];
+const money = v => v>=1 ? "€"+v.toFixed(1)+"M" : "€"+Math.round(v*1000)+"K";
+
+function fitBar(v){
+  const col = v>=70 ? "var(--accent)" : v>=58 ? "var(--warn)" : "var(--bad)";
+  return `<span class="fit"><i><b style="width:${v}%;background:${col}"></b></i>${v}</span>`;
+}
+function ovrColor(r){ return r>=82 ? "var(--accent2)" : r>=75 ? "var(--accent)" : r>=68 ? "var(--warn)" : "var(--muted)"; }
+
+function available(pos){ return club().squad.filter(p=>p.pos===pos && !p.injured); }
+function starter(pos){ return available(pos).sort((a,b)=>b.rating-a.rating)[0]; }
+function weakestPos(){
+  let best=null, score=Infinity;
+  POS.forEach(pos=>{
+    const s = starter(pos); const depthRatio = available(pos).length/TARGET_DEPTH[pos];
+    const sc = (s?s.rating:50) + depthRatio*8;
+    if(sc<score){score=sc;best=pos;}
+  });
+  return best;
+}
+
+/* ---------- squad audit ---------- */
+function renderKPIs(){
+  const sq = club().squad;
+  const total = sq.reduce((a,p)=>a+p.value,0);
+  const avgAge = sq.reduce((a,p)=>a+p.age,0)/sq.length;
+  const expiring = sq.filter(p=>p.contract<=YEAR+1).length;
+  const injured = sq.filter(p=>p.injured).length;
+  const mismatch = sq.filter(p=>styleFit(p,state.style)<58).length;
+  $("#kpis").innerHTML = [
+    ["Squad value", money(total)],
+    ["Average age", avgAge.toFixed(1)],
+    ["Contracts expiring ≤ "+(YEAR+1), expiring],
+    ["Long-term injuries", injured],
+    ["Style mismatches", mismatch]
+  ].map(([l,v])=>`<div class="panel kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
+}
+
+function renderDepth(){
+  $("#depth").innerHTML = POS.map(pos=>{
+    const n = available(pos).length, t = TARGET_DEPTH[pos];
+    const pct = Math.min(100, n/t*100);
+    const col = n>=t ? "var(--accent)" : n===t-1 ? "var(--warn)" : "var(--bad)";
+    const s = starter(pos);
+    return `<div class="pos" data-pos="${pos}" title="${POS_NAME[pos]}"><b>${pos}</b>
+      <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
+      <small>${n}/${t} · best ${s?s.rating:"–"}</small></div>`;
+  }).join("");
+  document.querySelectorAll(".pos").forEach(el=>el.onclick=()=>{ state.rPos = el.dataset.pos; switchTab("recruit"); });
+}
+
+function flags(p){
+  const f=[];
+  if(p.injured) f.push(`<span class="tag t-bad">Injured</span>`);
+  if(p.contract<=YEAR+1) f.push(`<span class="tag t-warn">Expiring</span>`);
+  if(p.age>=31) f.push(`<span class="tag t-info">Aging</span>`);
+  if(p.age<=21 && p.potential-p.rating>=8) f.push(`<span class="tag t-ok">Prospect</span>`);
+  if(styleFit(p,state.style)<58) f.push(`<span class="tag t-bad">Style mismatch</span>`);
+  return f.join("");
+}
+
+const COLS = [
+  ["name","Player"],["pos","Pos"],["age","Age","num"],["rating","OVR","num"],["potential","POT","num"],
+  ["fit","Style fit","num"],["value","Value","num"],["wage","Wage/wk","num"],["contract","Contract","num"],["flags","Flags"],["act",""]
+];
+function renderRoster(){
+  const rows = club().squad.map(p=>({...p, fit:styleFit(p,state.style)}));
+  const k = state.sortKey;
+  rows.sort((a,b)=>{
+    if(k==="pos") return (POS.indexOf(a.pos)-POS.indexOf(b.pos))*state.sortDir || b.rating-a.rating;
+    const av=a[k], bv=b[k];
+    return (typeof av==="string" ? av.localeCompare(bv) : av-bv)*state.sortDir;
+  });
+  $("#roster").innerHTML = `<thead><tr>${COLS.map(([key,l,c])=>`<th class="${c||""}" data-k="${key}">${l}${state.sortKey===key?(state.sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
+  <tbody>${rows.map(p=>`<tr class="${p.injured?"injured":""}" data-id="${p.id}">
+    <td><b>${p.name}</b></td><td>${p.pos}</td><td class="num">${p.age}</td>
+    <td class="num" style="color:${ovrColor(p.rating)};font-weight:600">${p.rating}</td><td class="num">${p.potential}</td>
+    <td class="num">${fitBar(p.fit)}</td>
+    <td class="num val">${money(p.value)} <span class="${p.trend>0?"up":p.trend<0?"down":""}">${p.trend>0?"▲":p.trend<0?"▼":""}</span></td>
+    <td class="num">€${p.wage}k</td><td class="num">${p.contract}</td>
+    <td>${flags(p)}</td>
+    <td><button class="btn ${p.injured?"":"danger"}" data-inj="${p.id}">${p.injured?"Mark fit":"Injure"}</button></td>
+  </tr>`).join("")}</tbody>`;
+  document.querySelectorAll("#roster th").forEach(th=>th.onclick=()=>{
+    const key=th.dataset.k; if(key==="flags"||key==="act") return;
+    if(state.sortKey===key) state.sortDir*=-1; else {state.sortKey=key; state.sortDir = (key==="name"||key==="pos")?1:-1;}
+    renderRoster();
+  });
+  document.querySelectorAll("[data-inj]").forEach(b=>b.onclick=()=>{
+    const p = club().squad.find(x=>x.id===b.dataset.inj);
+    p.injured = !p.injured;
+    if(p.injured){ state.ePos = p.pos; }
+    renderAll();
+  });
+}
+
+/* ---------- recruitment ---------- */
+function card(p, right, why){
+  return `<div class="card">
+    <div class="ovr" style="color:${ovrColor(p.rating)}">${p.rating}</div>
+    <div><h3>${p.name}</h3>
+      <div class="meta">${p.pos} · ${p.age} yrs · POT ${p.potential} · ${p.club}</div>
+      <div class="why">${why}</div></div>
+    <div class="right">${right}</div></div>`;
+}
+
+function renderRecruit(){
+  if(!state.rPos) state.rPos = weakestPos();
+  $("#rPos").innerHTML = POS.map(p=>`<option value="${p}" ${p===state.rPos?"selected":""}>${p} — ${POS_NAME[p]}</option>`).join("");
+  const s = starter(state.rPos);
+  const sRating = s ? s.rating : 0;
+  $("#starterBox").innerHTML = s ? `<b style="color:var(--text)">${s.name}</b> · OVR ${s.rating} · ${s.age} yrs` : `<span style="color:var(--bad)">No fit player available</span>`;
+  $("#youngFeeVal").textContent = "€"+$("#youngFee").value+"M";
+
+  const closed = state.window==="closed";
+  $("#recruitWindowNote").innerHTML = closed
+    ? `<p>⛔ <b>Transfer window closed.</b> Lists below are for planning the next window. For urgent cover, use <b>Emergency Free Agents</b>.</p><button class="btn primary" onclick="switchTab('emergency')">Go to free agents</button>`
+    : `<p>Recommendations for <b>${POS_NAME[state.rPos]}</b> under a <b>${state.style}</b> manager (${STYLES[state.style].desc}). Budget: <b>€${state.budget}M</b>.</p>`;
+
+  const pool = MARKET.filter(p=>p.pos===state.rPos).map(p=>({...p, fit:styleFit(p,state.style)}));
+
+  const up = pool.filter(p=>p.rating>sRating && p.value<=state.budget)
+    .sort((a,b)=>(b.rating*2+b.fit*0.5)-(a.rating*2+a.fit*0.5)).slice(0,5);
+  $("#upgradeList").innerHTML = up.length ? up.map(p=>card(p,
+      `<div class="price">${money(p.value)}</div><div class="meta">€${p.wage}k/wk</div>`,
+      `<span class="tag t-ok">+${p.rating-sRating} OVR vs starter</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit} · ${state.style}</span>`
+    )).join("")
+    : `<div class="empty">No player beats your starter within €${state.budget}M. Try raising the budget.</div>`;
+
+  const maxAge = +$("#youngAge").value, cap = +$("#youngFee").value;
+  const young = pool.filter(p=>p.age<=maxAge && p.value<=cap && p.potential>=sRating)
+    .sort((a,b)=>(b.potential*2+b.fit*0.4)-(a.potential*2+a.fit*0.4)).slice(0,5);
+  $("#youngList").innerHTML = young.length ? young.map(p=>card(p,
+      `<div class="price">${money(p.value)}</div><div class="meta">€${p.wage}k/wk</div>`,
+      `<span class="tag t-info">Ceiling ${p.potential}</span>${s && s.age>=29 ? `<span class="tag t-warn">Successor to ${s.name.split(" ")[1]} (${s.age})</span>` : ""}<span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`
+    )).join("")
+    : `<div class="empty">No young player with potential ≥ ${sRating} under €${cap}M. Try a higher fee cap or age.</div>`;
+}
+
+/* ---------- emergency free agents ---------- */
+function renderEmergency(){
+  const injured = club().squad.filter(p=>p.injured);
+  const badge = $("#injBadge");
+  badge.textContent = injured.length; badge.classList.toggle("hidden", !injured.length);
+
+  if(!state.ePos) state.ePos = injured[0]?.pos || weakestPos();
+  $("#ePos").innerHTML = POS.map(p=>`<option value="${p}" ${p===state.ePos?"selected":""}>${p} — ${POS_NAME[p]}</option>`).join("");
+
+  const ref = injured.find(p=>p.pos===state.ePos);
+  $("#emergencyAlert").innerHTML = injured.length
+    ? `<div class="alert"><p>🚨 <b>${injured.length} long-term injur${injured.length>1?"ies":"y"}:</b> ${injured.map(p=>`${p.name} (${p.pos}, OVR ${p.rating})`).join(", ")}. ${state.window==="closed"?"Window is closed — only free agents can be signed.":"Window is open, but free agents are the fastest, cheapest cover."}</p></div>`
+    : `<div class="alert info"><p>No injuries right now. Go to <b>Squad Audit</b> and press <b>Injure</b> on a player to simulate a crisis — this list updates automatically.</p></div>`;
+
+  const maxWage = +$("#wage").value, allowUnfit = $("#unfit").checked;
+  const target = ref ? ref.rating : (starter(state.ePos)?.rating || 70);
+  const list = FREE_AGENTS.filter(p=>p.pos===state.ePos && p.wage<=maxWage && (allowUnfit || p.fitness==="Match fit"))
+    .map(p=>({...p, fit:styleFit(p,state.style)}))
+    .sort((a,b)=>(b.rating*1.5+b.fit*0.6-Math.abs(b.rating-target)*0.3)-(a.rating*1.5+a.fit*0.6-Math.abs(a.rating-target)*0.3));
+  $("#faCount").textContent = list.length+" found";
+  $("#faList").innerHTML = list.length ? list.map(p=>{
+    const diff = p.rating-target;
+    const fitTag = p.fitness==="Match fit" ? "t-ok" : "t-warn";
+    return card({...p, club:"ex-"+p.lastClub},
+      `<div class="price">€${p.wage}k<span class="meta">/wk</span></div><div class="meta">No fee</div>`,
+      `<span class="tag ${fitTag}">${p.fitness}</span><span class="tag ${diff>=0?"t-ok":"t-warn"}">${diff>=0?"+":""}${diff} vs ${ref?"injured player":"starter"}</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`);
+  }).join("") : `<div class="empty">No free agents match. Raise the wage bracket or include players who aren't fully fit.</div>`;
+}
+
+/* ---------- offload planner ---------- */
+function renderOffload(){
+  const changed = state.style !== club().style;
+  $("#offloadIntro").innerHTML = `Players who fit poorly in a <b>${state.style}</b> system (${STYLES[state.style].desc}), with rival clubs whose style, needs and budget match them. ${changed?`<b>Manager change detected:</b> ${club().style} → ${state.style}.`:"Tip: change the manager playstyle above to see who becomes surplus."}`;
+  const out = club().squad.filter(p=>!p.injured).map(p=>({...p, fit:styleFit(p,state.style)}))
+    .filter(p=>p.fit<60 && !(p.age<=21 && p.potential-p.rating>=8)).sort((a,b)=>a.fit-b.fit).slice(0,8);
+  $("#offloadList").innerHTML = out.length ? out.map(p=>{
+    const buyers = BUYERS.map(b=>{
+      const f = styleFit(p,b.style);
+      const need = b.needs.includes(p.pos);
+      const afford = b.budget >= p.value;
+      const score = Math.round(f*0.7 + (need?20:0) + (afford?10:-25));
+      return {...b, f, need, afford, score};
+    }).filter(b=>b.f>p.fit && b.afford).sort((a,b)=>b.score-a.score).slice(0,3);
+    return card({...p, club:club().name},
+      `<div class="price">${money(p.value)}</div><div class="meta">asking price</div>`,
+      `<span class="tag t-bad">Fit ${p.fit} in ${state.style}</span>${flags(p)}
+       <div class="buyers">${buyers.length ? buyers.map(b=>`<span class="buyer">${b.name} · ${b.style} · fit <b>${b.f}</b>${b.need?" · needs "+p.pos:""}</span>`).join("") : `<span class="buyer">No buyer can afford ${money(p.value)} — consider a loan</span>`}</div>`);
+  }).join("") : `<div class="empty">Every available player fits the ${state.style} system reasonably well. Nothing to offload.</div>`;
+}
+
+/* ---------- tabs & wiring ---------- */
+function switchTab(t){
+  state.tab = t;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
+  ["audit","recruit","emergency","offload"].forEach(x=>$("#tab-"+x).classList.toggle("hidden", x!==t));
+  renderAll();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+
+function renderAll(){
+  $("#budgetVal").textContent = "€"+state.budget+"M";
+  renderKPIs(); renderDepth(); renderRoster(); renderRecruit(); renderEmergency(); renderOffload();
+}
+
+$("#club").innerHTML = CLUBS.map((c,i)=>`<option value="${i}">${c.name}</option>`).join("");
+$("#style").innerHTML = Object.keys(STYLES).map(s=>`<option>${s}</option>`).join("");
+$("#style").value = state.style;
+$("#club").onchange = e=>{ state.club=+e.target.value; state.style=club().style; $("#style").value=state.style; state.rPos=null; state.ePos=null; renderAll(); };
+$("#style").onchange = e=>{ state.style=e.target.value; renderAll(); };
+$("#window").onchange = e=>{ state.window=e.target.value; renderAll(); };
+$("#budget").oninput = e=>{ state.budget=+e.target.value; renderAll(); };
+$("#rPos").onchange = e=>{ state.rPos=e.target.value; renderRecruit(); };
+$("#youngAge").onchange = renderRecruit;
+$("#youngFee").oninput = renderRecruit;
+$("#ePos").onchange = e=>{ state.ePos=e.target.value; renderEmergency(); };
+$("#wage").onchange = renderEmergency;
+$("#unfit").onchange = renderEmergency;
+
+/* ---------- simulated live valuation feed ---------- */
+function tick(){
+  $("#clock").textContent = new Date().toLocaleTimeString();
+}
+setInterval(tick,1000); tick();
+setInterval(()=>{
+  const sq = club().squad;
+  const moved = [];
+  for(let i=0;i<3;i++){
+    const p = sq[Math.floor(Math.random()*sq.length)];
+    const pct = (Math.random()*3-1.5)/100;
+    p.value = Math.max(0.3, Math.round(p.value*(1+pct)*10)/10);
+    p.trend = pct>0?1:-1; moved.push(p.id);
+  }
+  if(state.tab==="audit"){
+    renderKPIs(); renderRoster();
+    moved.forEach(id=>{
+      const p = sq.find(x=>x.id===id);
+      const cell = document.querySelector(`tr[data-id="${id}"] .val`);
+      if(cell) cell.classList.add(p.trend>0?"flash-up":"flash-down");
+    });
+  }
+}, 6000);
+
+renderAll();
+</script>
+</body>
+</html>
