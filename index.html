@@ -145,6 +145,10 @@
   .buyer b{color:var(--accent)}
   .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin-top:10px;cursor:pointer}
   footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding:18px 0 30px}
+  a.pl{color:inherit;text-decoration:none;border-bottom:1px dotted var(--muted)}
+  a.pl:hover{color:var(--accent);border-color:var(--accent)}
+  #roster td{vertical-align:middle}
+  #roster td .meta{font-size:11px;font-weight:400}
 
   @media (max-width:900px){
     .controls{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -180,7 +184,7 @@
   </div>
   <div class="chips" id="leagueChips"></div>
   <div class="club-grid" id="clubGrid"></div>
-  <p class="w-note">Database: all 96 clubs of the 2026/27 Premier League, Serie A, LaLiga, Bundesliga and Ligue 1. Squads, ratings and values are simulated prototype data (see footer).</p>
+  <p class="w-note">Database: all 96 clubs of the 2026/27 Premier League, Serie A, LaLiga, Bundesliga and Ligue 1, with 2,400+ real players and Transfermarkt market values (snapshot 6 July 2026). The 14 promoted clubs, marked “sim”, have simulated squads.</p>
 </section>
 
 <!-- ================= APP ================= -->
@@ -195,7 +199,7 @@
       <div class="club-id" id="clubId"></div>
       <button class="btn" id="switchClub">Switch club</button>
       <div class="spacer"></div>
-      <span class="pill"><span class="dot"></span>Live valuations (sim) · <span id="clock">--:--</span></span>
+      <span class="pill"><span class="dot"></span>Market values: Transfermarkt · 6 Jul 2026</span>
       <span class="pill">🔒 Club data stays in your browser</span>
     </div>
     <div class="controls">
@@ -226,6 +230,7 @@
 
 <main class="wrap">
   <section id="tab-audit">
+    <div id="dataNote"></div>
     <div class="grid kpis" id="kpis"></div>
     <div class="section-title"><h2>Depth by position</h2><p>Available players vs. target depth · click a position to scout it</p></div>
     <div class="depth" id="depth"></div>
@@ -269,8 +274,9 @@
             <option value="999">Any wage</option>
           </select>
         </div>
-        <label class="check"><input type="checkbox" id="unfit"> Include players not fully match-fit</label>
-        <p class="meta" style="margin-top:14px">Free agents can be signed outside the transfer window. Ranked by closeness to the injured player's level and fit with your manager's playstyle.</p>
+        <label class="check"><input type="checkbox" id="unfit" checked> Include players over 32</label>
+        <label class="check"><input type="checkbox" id="verified"> Verified free agents only</label>
+        <p class="meta" style="margin-top:14px">Pool: <b>154 current free agents</b>. 138 come from a verified free-agent tracker (updated 22 Oct 2026), with values from the same source. 16 more were named as unattached in news reports from 2–4 Sep 2026 and need checking. Free agents can be signed outside the window. Ranked by closeness to the injured player's level and fit with your playstyle.</p>
       </div>
       <div class="panel">
         <div class="col-head"><h3>🚑 Unattached players</h3><span class="meta" id="faCount"></span></div>
@@ -288,11 +294,12 @@
 <footer>
   <div class="wrap">
     SquadCraft — ISE4133 Software Engineering prototype · Team: Rakhmatullaev Umid, Abdullaev Umrbek, Igamberdiev Fazliddin.<br>
-    Club list: the real 2026/27 line-ups of the top 5 European leagues. Player names, ratings, values, wages and contracts are <b>simulated prototype data</b> generated in your browser — they are not real players. A later version replaces them with a live data API (e.g. API-Football).
+    <b>Data:</b> club list = the 2026/27 top 5 European leagues. Players, positions, ages, nationalities, contracts and market values come from Transfermarkt via the open <a href="https://github.com/dcaribou/transfermarkt-datasets" target="_blank" rel="noopener" style="color:var(--accent)">transfermarkt-datasets</a> project (snapshot 6 July 2026). Transfers after that date aren't reflected, except the free-agent list: verified free agents from <a href="https://transfertracker.ai/free-agents" target="_blank" rel="noopener" style="color:var(--accent)">transfertracker.ai</a> (22 Oct 2026), plus players reported unattached by Sports Mole and Vanguard (2–4 Sep 2026); those 31 were taken out of their old clubs' squads. Squads of the 14 newly promoted clubs are simulated because the dataset only covers top flights. Est. ratings, potential, style attributes and wages are SquadCraft model estimates, not official figures.
   </div>
 </footer>
 </div>
 
+<script src="data.js"></script>
 <script>
 /* ================= CLUB DATABASE (2026/27 season) =================
    [name, short code, strength 0-100, default playstyle, aliases]          */
@@ -421,26 +428,37 @@ function buildSquad(club){
   for(let d=0; d<drops; d++){ squad.splice(ri(0,squad.length-1),1); }
   return squad;
 }
-CLUBS.forEach(c=>{ c.squad = buildSquad(c); c.budget = Math.max(5, Math.round((c.str-64)*6*LEAGUES[c.lg].mult/5)*5); });
-const ALL_PLAYERS = CLUBS.flatMap(c=>c.squad);
-
-seed = hashSeed("free-agents-2026");
-const FITNESS = ["Match fit","Match fit","Match fit","Lacks match sharpness","Recovering (2–3 wks)"];
-const FREE_AGENTS = [];
-POS.forEach(pos=>{
-  for(let i=0;i<6;i++){
-    const ex = pick(CLUBS);
-    const fa = makePlayer(pos, ri(66,80), ex.lg, ex.style, {age:ri(24,35), contract:YEAR, club:"Free agent", value:0});
-    fa.wage = Math.round(fa.wage*(0.5+rnd()*0.8));
-    fa.fitness = pick(FITNESS); fa.lastClub = ex.name;
-    FREE_AGENTS.push(fa);
+/* ---- real players (Transfermarkt open dataset) ---- */
+function fromRow(r){
+  return {id:"r"+r[0], tmId:r[0], name:r[1], pos:r[2], sub:r[3], age:r[4], nat:r[5], contract:r[6]||YEAR+1, value:r[7],
+          rating:r[8], potential:r[9], press:r[10], pass:r[11], pace:r[12], phys:r[13], wage:r[14], code:r[15], real:true, injured:false};
+}
+const bySquad = {};
+REAL_DATA.squad.forEach(r=>{ (bySquad[r[16]] = bySquad[r[16]] || []).push(fromRow(r)); });
+CLUBS.forEach(c=>{
+  if(bySquad[c.id]){
+    c.real = true;
+    c.squad = bySquad[c.id].map(p=>Object.assign(p,{club:c.name, clubId:c.id, lg:c.lg}));
+    const top = c.squad.map(p=>p.rating).sort((a,b)=>b-a).slice(0,14);
+    c.str = Math.round(top.reduce((a,b)=>a+b,0)/top.length);
+    const sv = c.squad.reduce((a,p)=>a+p.value,0);
+    c.budget = Math.min(250, Math.max(5, Math.round(sv*0.2/5)*5));
+  } else {
+    c.real = false;
+    c.squad = buildSquad(c);
+    c.budget = Math.max(5, Math.round((c.str-64)*6*LEAGUES[c.lg].mult/5)*5);
   }
 });
+const ALL_PLAYERS = CLUBS.filter(c=>c.real).flatMap(c=>c.squad);
+
+/* out-of-contract pool: players whose deal ended by 30 June 2026 */
+const FREE_AGENTS = REAL_DATA.fa.map(r=>Object.assign(fromRow(r), {id:"fa"+r[1], real:!!(r[0] && r[15]), club:"Free agent", lastClub:r[16]||"unknown club", freeSince:r[17], status:r[18]}));
 
 /* ================= WELCOME SCREEN ================= */
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const crest = c => `<span class="crest" style="background:${c.col}">${c.code}</span>`;
+const tmLink = p => p.real ? `<a class="pl" href="https://www.transfermarkt.com/${p.code}/profil/spieler/${p.tmId}" target="_blank" rel="noopener" title="Open Transfermarkt profile">${esc(p.name)}</a>` : esc(p.name);
 const lgTag = lg => `<span class="lg lg-${lg}">${LEAGUES[lg].name}</span>`;
 let chosen = null, sugg = [], sel = -1, chipLg = "ALL";
 
@@ -462,7 +480,7 @@ function search(q){
 function renderSuggest(){
   const box = $("#suggest");
   if(!sugg.length){ box.classList.add("hidden"); return; }
-  box.innerHTML = sugg.map((c,i)=>`<button type="button" role="option" aria-selected="${i===sel}" data-i="${i}">${crest(c)}<span>${esc(c.name)}</span>${lgTag(c.lg)}</button>`).join("");
+  box.innerHTML = sugg.map((c,i)=>`<button type="button" role="option" aria-selected="${i===sel}" data-i="${i}">${crest(c)}<span>${esc(c.name)}${c.real?"":` <span class="meta">· promoted, simulated squad</span>`}</span>${lgTag(c.lg)}</button>`).join("");
   box.classList.remove("hidden");
   box.querySelectorAll("button").forEach(b=>b.onmousedown=e=>{ e.preventDefault(); choose(sugg[+b.dataset.i]); });
 }
@@ -509,7 +527,7 @@ function renderChips(){
 }
 function renderGrid(){
   const list = CLUBS.filter(c=>chipLg==="ALL"||c.lg===chipLg).sort((a,b)=>a.name.localeCompare(b.name));
-  $("#clubGrid").innerHTML = list.map(c=>`<button class="club-btn" data-id="${c.id}" title="${esc(c.name)} · ${LEAGUES[c.lg].name}">${crest(c)}<span>${esc(c.name)}</span></button>`).join("");
+  $("#clubGrid").innerHTML = list.map(c=>`<button class="club-btn" data-id="${c.id}" title="${esc(c.name)} · ${LEAGUES[c.lg].name}${c.real?"":" · simulated squad"}">${crest(c)}<span>${esc(c.name)}${c.real?"":"<sup class='meta'> sim</sup>"}</span></button>`).join("");
   $("#clubGrid").querySelectorAll(".club-btn").forEach(b=>b.onclick=()=>openClub(CLUBS.find(c=>c.id===b.dataset.id)));
 }
 renderChips(); renderGrid();
@@ -518,7 +536,7 @@ try{ const last = localStorage.getItem("sc-last-club"); const c = CLUBS.find(x=>
 /* ================= APP ================= */
 const state = { club:null, style:null, window:"open", budget:60, sortKey:"pos", sortDir:1, tab:"audit", rPos:null, ePos:null, rLeague:"ALL" };
 const club = () => state.club;
-const money = v => v>=1 ? "€"+v.toFixed(1)+"M" : "€"+Math.round(v*1000)+"K";
+const money = v => v>=1000 ? "€"+(v/1000).toFixed(2)+"B" : v>=1 ? "€"+v.toFixed(1)+"M" : "€"+Math.round(v*1000)+"K";
 
 function openClub(c){
   state.club = c; state.style = c.style; state.budget = c.budget; state.rPos = null; state.ePos = null; state.tab = "audit";
@@ -554,6 +572,9 @@ function weakestPos(){
 /* ----- squad audit ----- */
 function renderKPIs(){
   const sq = club().squad;
+  $("#dataNote").innerHTML = club().real
+    ? `<div class="alert info"><p>📊 <b>Real squad:</b> ${sq.length} players and Transfermarkt market values as of <b>${REAL_DATA.asOf}</b>. Moves after that date (summer 2026 window) aren't included. Ratings, style attributes and wages are SquadCraft estimates. Click a name to open the Transfermarkt profile.</p></div>`
+    : `<div class="alert"><p>⚠️ <b>${esc(club().name)} were promoted from the second tier.</b> The dataset only covers top-flight squads, so this squad is <b>simulated</b> (made-up players). Recruitment targets and buyers still come from real top-flight players.</p></div>`;
   const total = sq.reduce((a,p)=>a+p.value,0);
   const avgAge = sq.reduce((a,p)=>a+p.age,0)/sq.length;
   $("#kpis").innerHTML = [
@@ -580,7 +601,7 @@ function flags(p){
   if(styleFit(p,state.style)<58) f.push(`<span class="tag t-bad">Style mismatch</span>`);
   return f.join("");
 }
-const COLS = [["name","Player"],["pos","Pos"],["age","Age","num"],["rating","OVR","num"],["potential","POT","num"],["fit","Style fit","num"],["value","Value","num"],["wage","Wage/wk","num"],["contract","Contract","num"],["flags","Flags"],["act",""]];
+const COLS = [["name","Player"],["pos","Pos"],["age","Age","num"],["value","Market value","num"],["rating","Est. OVR","num"],["potential","Est. POT","num"],["fit","Style fit","num"],["wage","Est. wage/wk","num"],["contract","Contract","num"],["flags","Flags"],["act",""]];
 function renderRoster(){
   const rows = club().squad.map(p=>({...p, fit:styleFit(p,state.style)}));
   const k = state.sortKey;
@@ -591,10 +612,10 @@ function renderRoster(){
   });
   $("#roster").innerHTML = `<thead><tr>${COLS.map(([key,l,c])=>`<th class="${c||""}" data-k="${key}">${l}${state.sortKey===key?(state.sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
   <tbody>${rows.map(p=>`<tr class="${p.injured?"injured":""}" data-id="${p.id}">
-    <td><b>${esc(p.name)}</b></td><td>${p.pos}</td><td class="num">${p.age}</td>
+    <td><b>${tmLink(p)}</b>${p.sub?`<div class="meta">${esc(p.sub)}${p.nat?" · "+esc(p.nat):""}</div>`:""}</td><td>${p.pos}</td><td class="num">${p.age}</td>
+    <td class="num" style="font-weight:600">${money(p.value)}</td>
     <td class="num" style="color:${ovrColor(p.rating)};font-weight:600">${p.rating}</td><td class="num">${p.potential}</td>
     <td class="num">${fitBar(p.fit)}</td>
-    <td class="num val">${money(p.value)} <span class="${p.trend>0?"up":p.trend<0?"down":""}">${p.trend>0?"▲":p.trend<0?"▼":""}</span></td>
     <td class="num">€${p.wage}k</td><td class="num">${p.contract}</td><td>${flags(p)}</td>
     <td><button class="btn ${p.injured?"":"danger"}" data-inj="${p.id}">${p.injured?"Mark fit":"Injure"}</button></td></tr>`).join("")}</tbody>`;
   document.querySelectorAll("#roster th").forEach(th=>th.onclick=()=>{
@@ -612,7 +633,7 @@ function renderRoster(){
 /* ----- recruitment ----- */
 function card(p, sub, right, why){
   return `<div class="card"><div class="ovr" style="color:${ovrColor(p.rating)}">${p.rating}</div>
-    <div><h3>${esc(p.name)}</h3><div class="meta">${sub}</div><div class="why">${why}</div></div>
+    <div><h3>${tmLink(p)}</h3><div class="meta">${sub}</div><div class="why">${why}</div></div>
     <div class="right">${right}</div></div>`;
 }
 function renderRecruit(){
@@ -624,7 +645,7 @@ function renderRecruit(){
   $("#youngFeeVal").textContent = "€"+$("#youngFee").value+"M";
   $("#recruitNote").innerHTML = state.window==="closed"
     ? `<p>⛔ <b>Transfer window closed.</b> These lists are for planning the next window. For urgent cover use <b>Emergency Free Agents</b>.</p><button class="btn primary" onclick="switchTab('emergency')">Go to free agents</button>`
-    : `<p>Targets for <b>${POS_NAME[state.rPos]}</b> from ${CLUBS.length-1} clubs, under a <b>${state.style}</b> manager (${STYLES[state.style].desc}). Budget: <b>€${state.budget}M</b>.</p>`;
+    : `<p>Targets for <b>${POS_NAME[state.rPos]}</b> from ${CLUBS.filter(c=>c.real && c.id!==club().id).length} clubs with real squad data, under a <b>${state.style}</b> manager (${STYLES[state.style].desc}). Budget: <b>€${state.budget}M</b>.</p>`;
 
   const pool = ALL_PLAYERS.filter(p=>p.pos===state.rPos && p.clubId!==club().id && (state.rLeague==="ALL"||p.lg===state.rLeague))
     .map(p=>({...p, fit:styleFit(p,state.style)}));
@@ -655,18 +676,22 @@ function renderEmergency(){
   $("#emergencyAlert").innerHTML = injured.length
     ? `<div class="alert"><p>🚨 <b>${injured.length} long-term injur${injured.length>1?"ies":"y"}:</b> ${injured.map(p=>`${esc(p.name)} (${p.pos}, OVR ${p.rating})`).join(", ")}. ${state.window==="closed"?"Window is closed — only free agents can be signed.":"Window is open, but free agents are the fastest, cheapest cover."}</p></div>`
     : `<div class="alert info"><p>No injuries right now. In <b>Squad Audit</b>, press <b>Injure</b> on a player to simulate a crisis — this list updates automatically.</p></div>`;
-  const maxWage = +$("#wage").value, allowUnfit = $("#unfit").checked;
+  const maxWage = +$("#wage").value, allowOld = $("#unfit").checked, onlyVerified = $("#verified").checked;
   const target = ref ? ref.rating : (starter(state.ePos)?.rating || 70);
-  const list = FREE_AGENTS.filter(p=>p.pos===state.ePos && p.wage<=maxWage && (allowUnfit || p.fitness==="Match fit"))
+  const list = FREE_AGENTS.filter(p=>p.pos===state.ePos && p.wage<=maxWage && (allowOld || p.age<=32) && (!onlyVerified || p.status==="verified"))
     .map(p=>({...p, fit:styleFit(p,state.style)}))
-    .sort((a,b)=>(b.rating*1.5+b.fit*0.6-Math.abs(b.rating-target)*0.3)-(a.rating*1.5+a.fit*0.6-Math.abs(a.rating-target)*0.3));
-  $("#faCount").textContent = list.length+" found";
+    .sort((a,b)=>(b.rating*1.5+b.fit*0.6-Math.abs(b.rating-target)*0.8)-(a.rating*1.5+a.fit*0.6-Math.abs(a.rating-target)*0.8))
+    .slice(0,12);
+  $("#faCount").textContent = "top "+list.length;
   $("#faList").innerHTML = list.length ? list.map(p=>{
     const d = p.rating-target;
-    return card(p, `${p.pos} · ${p.age} yrs · last club: ${esc(p.lastClub)}`,
-      `<div class="price">€${p.wage}k<span class="meta">/wk</span></div><div class="meta">No fee</div>`,
-      `<span class="tag ${p.fitness==="Match fit"?"t-ok":"t-warn"}">${p.fitness}</span><span class="tag ${d>=0?"t-ok":"t-warn"}">${d>=0?"+":""}${d} vs ${ref?"injured player":"starter"}</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`);
-  }).join("") : `<div class="empty">No free agents match. Raise the wage bracket or include players who aren't fully fit.</div>`;
+    const st = p.status==="verified"
+      ? `<span class="tag t-ok">Free agent · verified ${REAL_DATA.faAsOf}${p.freeSince?" · since "+esc(p.freeSince):""}</span>`
+      : `<span class="tag t-warn">Reported free early Sep 2026 · verify</span>`;
+    return card(p, `${esc(p.sub)} · ${p.age} yrs${p.nat?" · "+esc(p.nat):""} · last club: ${esc(p.lastClub)}`,
+      `<div class="price">€${p.wage}k<span class="meta">/wk est.</span></div><div class="meta">No fee · value ${money(p.value)}</div>`,
+      `${st}<span class="tag ${d>=0?"t-ok":"t-warn"}">${d>=0?"+":""}${d} vs ${ref?"injured player":"starter"}</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`);
+  }).join("") : `<div class="empty">No out-of-contract players match. Raise the wage bracket or include players over 32.</div>`;
 }
 
 /* ----- offload planner ----- */
@@ -715,21 +740,8 @@ $("#youngFee").oninput = renderRecruit;
 $("#ePos").onchange = e=>{ state.ePos=e.target.value; renderEmergency(); };
 $("#wage").onchange = renderEmergency;
 $("#unfit").onchange = renderEmergency;
+$("#verified").onchange = renderEmergency;
 
-/* simulated live valuation feed */
-setInterval(()=>{ $("#clock").textContent = new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"}); },1000);
-setInterval(()=>{
-  if(!club()) return;
-  const sq = club().squad, moved = [];
-  for(let i=0;i<3;i++){
-    const p = sq[Math.floor(Math.random()*sq.length)], pct = (Math.random()*3-1.5)/100;
-    p.value = Math.max(0.3, Math.round(p.value*(1+pct)*10)/10); p.trend = pct>0?1:-1; moved.push(p);
-  }
-  if(state.tab==="audit"){
-    renderKPIs(); renderRoster();
-    moved.forEach(p=>{ const cell=document.querySelector(`tr[data-id="${p.id}"] .val`); if(cell) cell.classList.add(p.trend>0?"flash-up":"flash-down"); });
-  }
-}, 6000);
 </script>
 </body>
 </html>
