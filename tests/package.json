@@ -1,0 +1,6 @@
+{
+  "name": "squadcraft-tests",
+  "private": true,
+  "scripts": { "test": "node run_checks.js" },
+  "dependencies": { "jsdom": "^26.0.0" }
+}
