@@ -4,10 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SquadCraft · TransferMind</title>
-<meta name="description" content="SquadCraft TransferMind — football transfer intelligence prototype for clubs in the Premier League, Serie A, LaLiga, Bundesliga and Ligue 1.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="description" content="SquadCraft TransferMind — football transfer intelligence for clubs in the Premier League, Serie A, LaLiga, Bundesliga and Ligue 1. All data and rules live in a Supabase database.">
 <style>
   :root{
     --bg:#0b1210; --panel:#121c19; --panel2:#18241f; --line:#25352f;
@@ -162,29 +159,81 @@
     .card .right{grid-column:1/-1;text-align:left;display:flex;gap:10px;align-items:center}
     .club-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
+  /* ===== additions for the database-backed version ===== */
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  h1,h2,h3,.crest,.logo-mark,.kpi .v,.ovr,.card .price,.pos b{font-family:"Space Grotesk",Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .ws-panel{width:100%;max-width:900px;margin-top:26px}
+  .ws-list{display:grid;gap:8px;margin-top:10px}
+  .ws-item{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  .ws-item .grow{flex:1;min-width:0}
+  .ws-item b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .btn.ghost{background:none}
+  .btn.big{padding:10px 14px;font-size:14px}
+  .groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .group{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .group.thin{border-color:rgba(255,93,93,.55)}
+  .group-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .group-head b{font-family:"Space Grotesk",Inter,sans-serif;font-size:15px}
+  .group-head .count{margin-left:auto;font-weight:600}
+  .group .bar{height:5px;background:#0c1512;border-radius:4px;margin:4px 0 8px;overflow:hidden}
+  .group .bar i{display:block;height:100%;border-radius:4px}
+  .plist{list-style:none;margin:0;padding:0;font-size:12.5px}
+  .plist li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;padding:3px 0;border-top:1px solid var(--line)}
+  .plist li:first-child{border-top:0}
+  .plist .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .plist .v{font-variant-numeric:tabular-nums;font-weight:600}
+  .plist .c{color:var(--muted);font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+  .plist li.inj .n{text-decoration:line-through;opacity:.6}
+  .plist-empty{color:var(--muted);font-size:12.5px;padding:4px 0}
+  .t-thin{background:rgba(255,93,93,.18);color:var(--bad);font-weight:600}
+  .form-panel{margin:14px 0;padding:14px}
+  .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .form-grid .wide{grid-column:span 2}
+  .form-grid input,.form-grid select,.inp{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .form-panel details{margin-top:10px}
+  .form-panel summary{cursor:pointer;color:var(--muted);font-size:13px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);max-width:min(560px,92vw);padding:12px 16px;border-radius:12px;background:#2a1414;border:1px solid rgba(255,93,93,.6);color:#ffd9d9;z-index:50;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  .toast.ok{background:#10281d;border-color:rgba(61,220,132,.6);color:#d9ffe9}
+  .loading{opacity:.55;pointer-events:none;transition:opacity .15s}
+  .fee-row{display:flex;gap:8px;align-items:center}
+  .fee-row input[type=number]{width:100%}
+  .linkish{background:none;border:0;color:var(--accent);cursor:pointer;padding:0;font:inherit;text-decoration:underline}
+  @media (max-width:900px){ .groups{grid-template-columns:repeat(2,minmax(0,1fr))} .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (max-width:520px){ .groups{grid-template-columns:minmax(0,1fr)} }
 </style>
 </head>
 <body>
 
-<!-- ================= WELCOME: ASK FOR CLUB ================= -->
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<!-- ================= WELCOME: PICK A CLUB OR BUILD YOUR OWN SQUAD ================= -->
 <section id="welcome">
   <div class="w-logo"><div class="logo-mark">SC</div><div style="text-align:left"><h3>SquadCraft</h3><span class="meta">TransferMind</span></div></div>
   <div class="w-inner">
-    <h1>Which club do you run?</h1>
-    <p class="sub">Type your club's name to load its squad audit, transfer targets and emergency options.</p>
+    <h1>Which squad do you manage?</h1>
+    <p class="sub">Pick one of 96 clubs to start from its real squad, or build your own roster from scratch. Everything is saved in the database.</p>
     <form class="search" id="searchForm" autocomplete="off">
       <div style="position:relative">
       <span class="ico">⌕</span>
       <input id="clubInput" type="text" placeholder="e.g. Arsenal, Inter, Real Betis, Dortmund, PSG…" aria-label="Club name" aria-autocomplete="list" aria-controls="suggest" autofocus>
       <div class="suggest hidden" id="suggest" role="listbox"></div>
       </div>
-      <button class="go" id="goBtn" type="submit" disabled>Open my club</button>
-      <div class="err" id="err"></div>
+      <button class="go" id="goBtn" type="submit" disabled>Open this club</button>
+      <div class="err" id="err" role="alert"></div>
     </form>
+    <div class="row" style="justify-content:center;margin-top:6px">
+      <span class="meta">or</span>
+      <button class="btn big" id="newCustom" type="button">＋ Build my own squad</button>
+    </div>
+  </div>
+  <div class="ws-panel hidden" id="wsPanel">
+    <h3 style="font-size:15px">Your saved squads</h3>
+    <div class="ws-list" id="wsList"></div>
   </div>
   <div class="chips" id="leagueChips"></div>
   <div class="club-grid" id="clubGrid"></div>
-  <p class="w-note">Database: all 96 clubs of the 2026/27 Premier League, Serie A, LaLiga, Bundesliga and Ligue 1, with 2,400+ real players and Transfermarkt market values (snapshot 6 July 2026). The 14 promoted clubs, marked “sim”, have simulated squads.</p>
+  <p class="w-note" id="welcomeNote">Loading the database…</p>
 </section>
 
 <!-- ================= APP ================= -->
@@ -197,10 +246,12 @@
         <div><h1>SquadCraft</h1><small>TransferMind</small></div>
       </div>
       <div class="club-id" id="clubId"></div>
-      <button class="btn" id="switchClub">Switch club</button>
+      <button class="btn" id="renameWs" title="Rename this squad">Rename</button>
+      <button class="btn" id="resetWs" title="Replace with a fresh copy of the original club squad">Reset</button>
+      <button class="btn" id="switchClub">My squads</button>
       <div class="spacer"></div>
-      <span class="pill"><span class="dot"></span>Market values: Transfermarkt · 6 Jul 2026</span>
-      <span class="pill">🔒 Club data stays in your browser</span>
+      <span class="pill"><span class="dot"></span><span id="srcPill">Live database</span></span>
+      <span class="pill" title="Your squads are stored in the database under an anonymous key kept in this browser. No account, no personal data.">🔒 Anonymous · no account</span>
     </div>
     <div class="controls">
       <div class="field">
@@ -231,29 +282,37 @@
 <main class="wrap">
   <section id="tab-audit">
     <div id="dataNote"></div>
+    <div id="thinAlert"></div>
     <div class="grid kpis" id="kpis"></div>
-    <div class="section-title"><h2>Depth by position</h2><p>Available players vs. target depth · click a position to scout it</p></div>
-    <div class="depth" id="depth"></div>
-    <div class="section-title"><h2>Roster &amp; valuations</h2><p>Click headers to sort · mark a long-term injury to trigger the emergency engine</p></div>
+    <div class="section-title"><h2>Squad by position</h2><p>Every player under their position group · fewer than 2 players = “Thin depth” · click “Scout” to see targets</p></div>
+    <div class="groups" id="groups"></div>
+    <div class="section-title"><h2>Roster &amp; valuations</h2><p>Click headers to sort · mark an injury to trigger the emergency engine · add, edit or remove players</p>
+      <button class="btn primary" id="addPlayerBtn" style="margin-left:auto">＋ Add player</button></div>
+    <div class="panel form-panel hidden" id="playerForm"></div>
     <div class="table-wrap"><table id="roster"></table></div>
   </section>
 
   <section id="tab-recruit" class="hidden">
     <div class="alert info" id="recruitNote"></div>
-    <div class="grid controls" style="grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin-bottom:16px">
+    <div class="grid controls" style="grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin-bottom:12px">
       <div class="field"><label for="rPos">Position</label><select id="rPos"></select></div>
       <div class="field"><label for="rLeague">Search in league</label><select id="rLeague"></select></div>
-      <div class="field"><label for="youngAge">Future-proof max age</label><select id="youngAge"><option>21</option><option selected>23</option><option>25</option></select></div>
-      <div class="field"><label for="youngFee">Future-proof fee cap: <span id="youngFeeVal"></span></label><input type="range" id="youngFee" min="5" max="80" step="5" value="30"></div>
+      <div class="field"><label for="upFee">Immediate Upgrade: max fee (€M)</label>
+        <div class="fee-row"><input class="inp" type="number" id="upFee" min="0" step="1" placeholder="no limit"></div></div>
+      <div class="field"><label for="youngFee">Future-Proof: max fee (€M)</label>
+        <div class="fee-row"><input class="inp" type="number" id="youngFee" min="0" step="1" value="30"></div></div>
+    </div>
+    <div class="grid controls" style="grid-template-columns:repeat(4,minmax(0,1fr));padding:0;margin-bottom:16px">
+      <div class="field"><label for="youngAge">Future-Proof: max age</label><input class="inp" type="number" id="youngAge" min="15" max="50" step="1" value="21"></div>
     </div>
     <p class="meta" id="starterBox" style="margin:-4px 0 14px"></p>
     <div class="grid two">
       <div class="panel">
-        <div class="col-head"><h3>⚡ Immediate Upgrade</h3><span class="meta">Outperforms starter · within budget</span></div>
+        <div class="col-head"><h3>⚡ Immediate Upgrade</h3><span class="meta" id="upMeta">Rates above your starter</span></div>
         <div class="cards" id="upgradeList"></div>
       </div>
       <div class="panel">
-        <div class="col-head"><h3>🌱 Future-Proof Potential</h3><span class="meta">High ceiling · under fee cap</span></div>
+        <div class="col-head"><h3>🌱 Future-Proof</h3><span class="meta" id="youngMeta">Young players under your fee limit</span></div>
         <div class="cards" id="youngList"></div>
       </div>
     </div>
@@ -276,7 +335,7 @@
         </div>
         <label class="check"><input type="checkbox" id="unfit" checked> Include players over 32</label>
         <label class="check"><input type="checkbox" id="verified"> Verified free agents only</label>
-        <p class="meta" style="margin-top:14px">Pool: <b>154 current free agents</b>. 138 come from a verified free-agent tracker (updated 22 Oct 2026), with values from the same source. 16 more were named as unattached in news reports from 2–4 Sep 2026 and need checking. Free agents can be signed outside the window. Ranked by closeness to the injured player's level and fit with your playstyle.</p>
+        <p class="meta" style="margin-top:14px" id="faNote">Free agents come from the database. Verified ones are from a free-agent tracker; “reported” ones were named in news reports and need checking. Ranked by closeness to the injured player's level and fit with your playstyle.</p>
       </div>
       <div class="panel">
         <div class="col-head"><h3>🚑 Unattached players</h3><span class="meta" id="faCount"></span></div>
@@ -293,455 +352,15 @@
 
 <footer>
   <div class="wrap">
-    SquadCraft — ISE4133 Software Engineering prototype · Team: Rakhmatullaev Umid, Abdullaev Umrbek, Igamberdiev Fazliddin.<br>
-    <b>Data:</b> club list = the 2026/27 top 5 European leagues. Players, positions, ages, nationalities, contracts and market values come from Transfermarkt via the open <a href="https://github.com/dcaribou/transfermarkt-datasets" target="_blank" rel="noopener" style="color:var(--accent)">transfermarkt-datasets</a> project (snapshot 6 July 2026). Transfers after that date aren't reflected, except the free-agent list: verified free agents from <a href="https://transfertracker.ai/free-agents" target="_blank" rel="noopener" style="color:var(--accent)">transfertracker.ai</a> (22 Oct 2026), plus players reported unattached by Sports Mole and Vanguard (2–4 Sep 2026); those 31 were taken out of their old clubs' squads. Squads of the 14 newly promoted clubs are simulated because the dataset only covers top flights. Est. ratings, potential, style attributes and wages are SquadCraft model estimates, not official figures.
+    SquadCraft — ISE4133 Software Engineering · Team: Rakhmatullaev Umid, Abdullaev Umrbek, Igamberdiev Fazliddin.<br>
+    <b>Architecture:</b> this page is a thin client. All data and all rules (depth, thin-depth, upgrades, future-proof, free agents, offload) live in a Supabase PostgreSQL database and run as SQL functions; see <code>db/schema.sql</code>.
+    <b>Data:</b> players, positions, ages, nationalities, contracts and market values come from Transfermarkt via the open <a href="https://github.com/dcaribou/transfermarkt-datasets" target="_blank" rel="noopener" style="color:var(--accent)">transfermarkt-datasets</a> project (snapshot 6 July 2026); free agents from <a href="https://transfertracker.ai/free-agents" target="_blank" rel="noopener" style="color:var(--accent)">transfertracker.ai</a> (22 Oct 2026) and news reports (2–4 Sep 2026). Squads of the 14 newly promoted clubs are simulated (made-up players). Est. ratings, potential, style attributes and wages are SquadCraft model estimates, not official figures.
+    <br>Access key: <button class="linkish" id="copyKey" type="button">copy</button> · <button class="linkish" id="useKey" type="button">use another key</button> <span class="meta">(your squads are tied to this key; keep it to open them on another device)</span>
   </div>
 </footer>
 </div>
 
-<script src="data.js"></script>
-<script>
-/* ================= CLUB DATABASE (2026/27 season) =================
-   [name, short code, strength 0-100, default playstyle, aliases]          */
-const LEAGUES = {
-  PL:{name:"Premier League", country:"England", mult:1.35},
-  SA:{name:"Serie A", country:"Italy", mult:1.0},
-  LL:{name:"LaLiga", country:"Spain", mult:1.05},
-  BL:{name:"Bundesliga", country:"Germany", mult:1.05},
-  L1:{name:"Ligue 1", country:"France", mult:0.95}
-};
-const P="Possession", H="High-Press", C="Counter-Attack", B="Low-Block";
-const RAW = {
-  PL:[["Arsenal","ARS",85,H,"gunners afc"],["Aston Villa","AVL",79,H,"villa"],["Bournemouth","BOU",76,H,"cherries afcb"],
-      ["Brentford","BRE",76,C,"bees"],["Brighton & Hove Albion","BHA",77,P,"brighton seagulls"],["Chelsea","CHE",83,P,"blues cfc"],
-      ["Coventry City","COV",72,C,"coventry sky blues"],["Crystal Palace","CRY",77,C,"palace eagles"],["Everton","EVE",75,B,"toffees"],
-      ["Fulham","FUL",75,P,"cottagers"],["Hull City","HUL",71,C,"hull tigers"],["Ipswich Town","IPS",72,P,"ipswich tractor boys"],
-      ["Leeds United","LEE",74,H,"leeds lufc"],["Liverpool","LIV",85,H,"lfc reds"],["Manchester City","MCI",86,P,"man city mcfc citizens"],
-      ["Manchester United","MUN",80,C,"man utd man united mufc red devils"],["Newcastle United","NEW",80,H,"newcastle toon magpies nufc"],
-      ["Nottingham Forest","NFO",77,C,"forest nffc"],["Sunderland","SUN",74,C,"black cats safc"],["Tottenham Hotspur","TOT",80,H,"spurs tottenham thfc"]],
-  SA:[["Atalanta","ATA",80,H,"la dea"],["Bologna","BOL",78,H,"rossoblu"],["Cagliari","CAG",73,B,""],["Como","COM",78,P,"como 1907"],
-      ["Fiorentina","FIO",77,P,"viola"],["Frosinone","FRO",70,C,""],["Genoa","GEN",74,H,"grifone"],["Inter","INT",84,P,"inter milan internazionale nerazzurri"],
-      ["Juventus","JUV",82,P,"juve bianconeri"],["Lazio","LAZ",78,H,"biancocelesti"],["Lecce","LEC",72,B,""],["AC Milan","MIL",82,C,"milan rossoneri acm"],
-      ["Monza","MON",72,B,""],["Napoli","NAP",83,B,"ssc napoli partenopei"],["Parma","PAR",73,C,""],["Roma","ROM",80,H,"as roma giallorossi"],
-      ["Sassuolo","SAS",74,P,"neroverdi"],["Torino","TOR",75,H,"toro granata"],["Udinese","UDI",74,B,"friulani"],["Venezia","VEN",71,P,"lagunari"]],
-  LL:[["Deportivo Alavés","ALA",73,B,"alaves"],["Athletic Club","ATH",79,H,"athletic bilbao"],["Atlético Madrid","ATM",83,B,"atletico atleti"],
-      ["Barcelona","BAR",86,P,"barca fc barcelona fcb"],["Celta Vigo","CEL",75,P,"celta"],["Deportivo La Coruña","DEP",71,C,"depor deportivo a coruna"],
-      ["Elche","ELC",72,P,""],["Espanyol","ESP",73,B,""],["Getafe","GET",74,B,""],["Levante","LEV",72,C,""],["Málaga","MAL",71,C,"malaga"],
-      ["Osasuna","OSA",74,H,""],["Racing Santander","RAC",70,C,"racing"],["Rayo Vallecano","RAY",74,H,"rayo"],["Real Betis","BET",78,P,"betis"],
-      ["Real Madrid","RMA",86,C,"madrid rmcf los blancos"],["Real Sociedad","RSO",78,P,"la real sociedad"],["Sevilla","SEV",76,C,"sevilla fc"],
-      ["Valencia","VAL",75,C,"valencia cf"],["Villarreal","VIL",79,P,"yellow submarine"]],
-  BL:[["FC Augsburg","FCA",74,C,"augsburg"],["Bayern Munich","FCB",86,P,"bayern munchen fc bayern"],["Bayer Leverkusen","B04",82,P,"leverkusen"],
-      ["Borussia Dortmund","BVB",82,H,"dortmund bvb"],["Borussia Mönchengladbach","BMG",75,C,"gladbach monchengladbach"],["SV Elversberg","SVE",70,P,"elversberg"],
-      ["Eintracht Frankfurt","SGE",79,H,"frankfurt"],["SC Freiburg","SCF",77,H,"freiburg"],["Hamburger SV","HSV",73,C,"hamburg hsv"],
-      ["TSG Hoffenheim","TSG",76,H,"hoffenheim"],["1. FC Köln","KOE",73,C,"koln cologne fc koln"],["RB Leipzig","RBL",81,H,"leipzig"],
-      ["Mainz 05","M05",75,H,"mainz"],["SC Paderborn","SCP",70,C,"paderborn"],["Schalke 04","S04",72,C,"schalke"],["VfB Stuttgart","VFB",79,P,"stuttgart"],
-      ["Union Berlin","FCU",74,B,"union"],["Werder Bremen","SVW",74,P,"werder bremen"]],
-  L1:[["Angers","ANG",71,B,"sco angers"],["Auxerre","AUX",72,B,"aja"],["Stade Brestois","BRE",74,C,"brest"],["Le Havre","HAC",71,B,"havre"],
-      ["Le Mans","LEM",69,C,"le mans fc"],["RC Lens","RCL",77,H,"lens"],["Lille","LIL",79,P,"losc"],["Lorient","LOR",71,C,"fc lorient"],
-      ["Olympique Lyonnais","OL",79,P,"lyon ol"],["Olympique de Marseille","OM",80,H,"marseille om"],["AS Monaco","ASM",80,H,"monaco"],
-      ["OGC Nice","NIC",76,C,"nice"],["Paris FC","PFC",73,P,"pfc"],["Paris Saint-Germain","PSG",86,P,"psg paris"],["Stade Rennais","REN",76,C,"rennes"],
-      ["RC Strasbourg","RCS",76,P,"strasbourg"],["Toulouse","TFC",73,C,"tfc"],["Troyes","ETA",70,C,"estac troyes"]]
-};
-const CREST_COL = ["#3ddc84","#5cc8ff","#ffb547","#ff6b4a","#a46cff","#c6f432","#ff4d6d","#4be1d4","#f5f5f5"];
-const CLUBS = [];
-Object.entries(RAW).forEach(([lg,list])=>list.forEach(([name,code,str,style,alias])=>{
-  CLUBS.push({name,code,lg,str,style,alias,id:lg+"-"+code,col:CREST_COL[(name.length+code.charCodeAt(0))%CREST_COL.length]});
-}));
-const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
-CLUBS.forEach(c=>c.keys = norm(c.name+" "+c.code+" "+c.alias));
-
-/* ================= SIMULATED PLAYER DATA ================= */
-let seed = 1;
-function hashSeed(str){ let h=2166136261; for(const ch of str){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619);} return h>>>0; }
-function rnd(){ seed = (Math.imul(seed,1664525) + 1013904223) >>> 0; return seed / 4294967296; }
-const ri = (a,b) => Math.floor(rnd()*(b-a+1))+a;
-const pick = arr => arr[Math.floor(rnd()*arr.length)];
-const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
-
-const POS = ["GK","CB","FB","DM","CM","AM","W","ST"];
-const POS_NAME = {GK:"Goalkeeper",CB:"Centre-back",FB:"Full-back",DM:"Def. midfield",CM:"Central mid",AM:"Attacking mid",W:"Winger",ST:"Striker"};
-const TARGET_DEPTH = {GK:3,CB:4,FB:4,DM:2,CM:3,AM:2,W:4,ST:3};
-const STYLES = {
-  "High-Press":    {press:3,  pass:1,  pace:2,  phys:1,   desc:"intense pressing, quick transitions"},
-  "Possession":    {press:1,  pass:3,  pace:1,  phys:0.5, desc:"short passing, control of the ball"},
-  "Counter-Attack":{press:0.5,pass:1,  pace:3,  phys:1.5, desc:"deep block, fast breaks"},
-  "Low-Block":     {press:0.5,pass:0.5,pace:1,  phys:3,   desc:"compact defending, physical duels"}
-};
-const NAMES = {
-  PL:{f:["Jack","Harry","Callum","Ollie","Reece","Mason","Kieran","Josh","Ethan","Lewis","Tyrese","Jordan","Ben","Alfie","Rhys","Connor"],l:["Walker","Hughes","Barnes","Fletcher","Mitchell","Doyle","Carter","Palmer","Holloway","Bennett","Whitaker","Gray","Ashworth","Crane","Pearce","Ellison"]},
-  SA:{f:["Luca","Matteo","Davide","Federico","Alessandro","Lorenzo","Nicolò","Andrea","Simone","Gianluca","Riccardo","Tommaso","Marco","Pietro"],l:["Rossi","Bianchi","Ferraro","Esposito","Colombo","Ricci","Marino","Greco","Bruno","Galli","Conti","De Luca","Mancini","Lombardi"]},
-  LL:{f:["Pablo","Sergio","Álvaro","Iker","Javier","Unai","Hugo","Mario","Adrián","Rubén","Diego","Marcos","Iván","Raúl"],l:["García","Martínez","López","Sánchez","Romero","Navarro","Torres","Ruiz","Moreno","Herrera","Iglesias","Ortega","Castro","Vidal"]},
-  BL:{f:["Jonas","Leon","Felix","Lukas","Niklas","Tim","Florian","Maximilian","Paul","Jannik","Kevin","Moritz","Julian","Elias"],l:["Müller","Schmidt","Weber","Wagner","Becker","Hoffmann","Schulz","Koch","Richter","Klein","Wolf","Neumann","Braun","Krüger"]},
-  L1:{f:["Hugo","Théo","Lucas","Mathis","Enzo","Nathan","Rayan","Kylian","Adrien","Bastien","Maxence","Yanis","Jules","Noé"],l:["Martin","Bernard","Dubois","Lefèvre","Moreau","Laurent","Girard","Fontaine","Rousseau","Mercier","Blanc","Garnier","Chevalier","Faure"]},
-  INT:{f:["Mateo","Kai","Ilyas","Emre","Bruno","Sami","Viktor","Malik","Nikola","Aziz","Yusuf","Kenji","Amir","Kofi","Rui","Timur","Ousmane","Bilal","Dario","Erling"],l:["Okafor","Santos","Kovač","Lindqvist","Rahimov","Petrov","Haddad","Novak","Silva","Mendes","Larsen","Tanaka","Yılmaz","Mensah","Aliyev","Diallo","Kurt","Nordin","Abiola","Correia"]}
-};
-function playerName(lg){ const pool = rnd()<0.55 ? NAMES[lg] : NAMES.INT; return pick(pool.f)+" "+pick(rnd()<0.5?pool.l:NAMES.INT.l); }
-
-const POS_BIAS = {
-  GK:{press:-15,pass:0,pace:-10,phys:10}, CB:{press:0,pass:-5,pace:-5,phys:12},
-  FB:{press:5,pass:0,pace:10,phys:0},     DM:{press:5,pass:5,pace:-5,phys:8},
-  CM:{press:5,pass:10,pace:0,phys:0},     AM:{press:0,pass:12,pace:5,phys:-8},
-  W:{press:3,pass:0,pace:14,phys:-8},     ST:{press:2,pass:-3,pace:6,phys:8}
-};
-const YEAR = 2026;
-let uid = 0;
-
-function valueOf(p, mult=1){
-  const base = Math.exp((p.rating-60)/6.2)*0.65;
-  const age = p.age<=21 ? 1.25+(p.potential-p.rating)/18 : p.age<=26 ? 1.2 : p.age<=29 ? 1.0 : p.age<=31 ? 0.65 : 0.35;
-  const left = p.contract - YEAR;
-  const c = left<=0 ? 0.55 : left===1 ? 0.8 : 1;
-  return Math.max(0.3, Math.round(base*age*c*mult*10)/10);
-}
-
-/* style bias: players at a club lean towards that club's playstyle */
-const STYLE_BIAS = {"High-Press":{press:8,pace:4},"Possession":{pass:9},"Counter-Attack":{pace:8,phys:3},"Low-Block":{phys:8,press:-3}};
-
-function makePlayer(pos, level, lg, styleLean, opts={}){
-  const age = opts.age ?? ri(18,34);
-  const rating = clamp(Math.round(level + ri(-5,5) - (age<21?ri(2,7):0) - (age>32?ri(0,4):0)), 52, 92);
-  const potential = age<=23 ? clamp(rating + ri(4,14), rating, 94) : age<=27 ? rating + ri(0,3) : rating;
-  const b = POS_BIAS[pos], sb = STYLE_BIAS[styleLean] || {};
-  const attr = k => clamp(ri(40,84) + b[k] + (sb[k]||0) + (age>30 && (k==="pace"||k==="press") ? -ri(5,15) : 0), 25, 96);
-  const p = {
-    id:"p"+(uid++), name:playerName(lg), pos, age, rating, potential,
-    press:attr("press"), pass:attr("pass"), pace:attr("pace"), phys:attr("phys"),
-    contract: YEAR + ri(0,5), injured:false, trend:0, ...opts
-  };
-  p.wage = opts.wage ?? Math.round(Math.exp((rating-60)/8.5)*5*LEAGUES[lg].mult);
-  p.value = opts.value ?? valueOf(p, LEAGUES[lg].mult);
-  return p;
-}
-
-function buildSquad(club){
-  seed = hashSeed(club.id);
-  const squad = [];
-  POS.forEach(pos=>{
-    const n = TARGET_DEPTH[pos];
-    for(let i=0;i<n;i++){
-      const level = club.str - (i>=Math.ceil(n/2) ? 5 : 0) - (pos==="GK" && i===2 ? 6 : 0);
-      squad.push(makePlayer(pos, level, club.lg, club.style, {club:club.name, clubId:club.id, lg:club.lg}));
-    }
-  });
-  /* realistic gaps: drop 1–2 random depth players */
-  const drops = ri(1,2);
-  for(let d=0; d<drops; d++){ squad.splice(ri(0,squad.length-1),1); }
-  return squad;
-}
-/* ---- real players (Transfermarkt open dataset) ---- */
-function fromRow(r){
-  return {id:"r"+r[0], tmId:r[0], name:r[1], pos:r[2], sub:r[3], age:r[4], nat:r[5], contract:r[6]||YEAR+1, value:r[7],
-          rating:r[8], potential:r[9], press:r[10], pass:r[11], pace:r[12], phys:r[13], wage:r[14], code:r[15], real:true, injured:false};
-}
-const bySquad = {};
-REAL_DATA.squad.forEach(r=>{ (bySquad[r[16]] = bySquad[r[16]] || []).push(fromRow(r)); });
-CLUBS.forEach(c=>{
-  if(bySquad[c.id]){
-    c.real = true;
-    c.squad = bySquad[c.id].map(p=>Object.assign(p,{club:c.name, clubId:c.id, lg:c.lg}));
-    const top = c.squad.map(p=>p.rating).sort((a,b)=>b-a).slice(0,14);
-    c.str = Math.round(top.reduce((a,b)=>a+b,0)/top.length);
-    const sv = c.squad.reduce((a,p)=>a+p.value,0);
-    c.budget = Math.min(250, Math.max(5, Math.round(sv*0.2/5)*5));
-  } else {
-    c.real = false;
-    c.squad = buildSquad(c);
-    c.budget = Math.max(5, Math.round((c.str-64)*6*LEAGUES[c.lg].mult/5)*5);
-  }
-});
-const ALL_PLAYERS = CLUBS.filter(c=>c.real).flatMap(c=>c.squad);
-
-/* out-of-contract pool: players whose deal ended by 30 June 2026 */
-const FREE_AGENTS = REAL_DATA.fa.map(r=>Object.assign(fromRow(r), {id:"fa"+r[1], real:!!(r[0] && r[15]), club:"Free agent", lastClub:r[16]||"unknown club", freeSince:r[17], status:r[18]}));
-
-/* ================= WELCOME SCREEN ================= */
-const $ = s => document.querySelector(s);
-const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const crest = c => `<span class="crest" style="background:${c.col}">${c.code}</span>`;
-const tmLink = p => p.real ? `<a class="pl" href="https://www.transfermarkt.com/${p.code}/profil/spieler/${p.tmId}" target="_blank" rel="noopener" title="Open Transfermarkt profile">${esc(p.name)}</a>` : esc(p.name);
-const lgTag = lg => `<span class="lg lg-${lg}">${LEAGUES[lg].name}</span>`;
-let chosen = null, sugg = [], sel = -1, chipLg = "ALL";
-
-function scoreClub(c, q){
-  const n = norm(c.name);
-  if(n===q || norm(c.code)===q) return 100;
-  if(n.startsWith(q)) return 80;
-  if(c.keys.split(" ").some(w=>w.startsWith(q))) return 60;
-  if(c.keys.includes(q)) return 40;
-  /* light typo tolerance: all query words appear as prefixes */
-  const ws = q.split(" ");
-  if(ws.length>1 && ws.every(w=>c.keys.split(" ").some(k=>k.startsWith(w)))) return 30;
-  return 0;
-}
-function search(q){
-  q = norm(q); if(!q) return [];
-  return CLUBS.map(c=>({c,s:scoreClub(c,q)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||b.c.str-a.c.str).slice(0,7).map(x=>x.c);
-}
-function renderSuggest(){
-  const box = $("#suggest");
-  if(!sugg.length){ box.classList.add("hidden"); return; }
-  box.innerHTML = sugg.map((c,i)=>`<button type="button" role="option" aria-selected="${i===sel}" data-i="${i}">${crest(c)}<span>${esc(c.name)}${c.real?"":` <span class="meta">· promoted, simulated squad</span>`}</span>${lgTag(c.lg)}</button>`).join("");
-  box.classList.remove("hidden");
-  box.querySelectorAll("button").forEach(b=>b.onmousedown=e=>{ e.preventDefault(); choose(sugg[+b.dataset.i]); });
-}
-function choose(c){
-  chosen = c; $("#clubInput").value = c.name; sugg = []; renderSuggest();
-  $("#goBtn").disabled = false; $("#err").textContent = "";
-}
-$("#clubInput").addEventListener("input", e=>{
-  chosen = null; sel = -1;
-  sugg = search(e.target.value);
-  const exact = sugg.find(c=>norm(c.name)===norm(e.target.value) || norm(c.code)===norm(e.target.value));
-  if(exact) chosen = exact;
-  $("#goBtn").disabled = !e.target.value.trim();
-  $("#err").textContent = "";
-  renderSuggest();
-});
-$("#clubInput").addEventListener("keydown", e=>{
-  if(!sugg.length) return;
-  if(e.key==="ArrowDown"){ sel=(sel+1)%sugg.length; renderSuggest(); e.preventDefault(); }
-  else if(e.key==="ArrowUp"){ sel=(sel-1+sugg.length)%sugg.length; renderSuggest(); e.preventDefault(); }
-  else if(e.key==="Enter" && sel>=0){ choose(sugg[sel]); e.preventDefault(); }
-  else if(e.key==="Escape"){ sugg=[]; renderSuggest(); }
-});
-$("#clubInput").addEventListener("blur", ()=>setTimeout(()=>{ sugg=[]; renderSuggest(); },120));
-$("#searchForm").addEventListener("submit", e=>{
-  e.preventDefault();
-  const q = $("#clubInput").value.trim();
-  if(!chosen){
-    const r = search(q);
-    if(r.length===1 || (r.length && scoreClub(r[0],norm(q))>=80)) chosen = r[0];
-  }
-  if(chosen){ openClub(chosen); return; }
-  const r = search(q);
-  $("#err").innerHTML = r.length
-    ? `Several clubs match “${esc(q)}” — pick one from the list.`
-    : `“${esc(q)}” isn't in our database (Premier League, Serie A, LaLiga, Bundesliga, Ligue 1, 2026/27). Check the spelling or browse below.`;
-  sugg = r; renderSuggest();
-});
-
-function renderChips(){
-  const opts = [["ALL","All leagues"],...Object.entries(LEAGUES).map(([k,v])=>[k,v.name])];
-  $("#leagueChips").innerHTML = opts.map(([k,l])=>`<button class="chip" aria-pressed="${chipLg===k}" data-lg="${k}">${l}</button>`).join("");
-  $("#leagueChips").querySelectorAll(".chip").forEach(b=>b.onclick=()=>{ chipLg=b.dataset.lg; renderChips(); renderGrid(); });
-}
-function renderGrid(){
-  const list = CLUBS.filter(c=>chipLg==="ALL"||c.lg===chipLg).sort((a,b)=>a.name.localeCompare(b.name));
-  $("#clubGrid").innerHTML = list.map(c=>`<button class="club-btn" data-id="${c.id}" title="${esc(c.name)} · ${LEAGUES[c.lg].name}${c.real?"":" · simulated squad"}">${crest(c)}<span>${esc(c.name)}${c.real?"":"<sup class='meta'> sim</sup>"}</span></button>`).join("");
-  $("#clubGrid").querySelectorAll(".club-btn").forEach(b=>b.onclick=()=>openClub(CLUBS.find(c=>c.id===b.dataset.id)));
-}
-renderChips(); renderGrid();
-try{ const last = localStorage.getItem("sc-last-club"); const c = CLUBS.find(x=>x.id===last); if(c){ choose(c); } }catch(e){}
-
-/* ================= APP ================= */
-const state = { club:null, style:null, window:"open", budget:60, sortKey:"pos", sortDir:1, tab:"audit", rPos:null, ePos:null, rLeague:"ALL" };
-const club = () => state.club;
-const money = v => v>=1000 ? "€"+(v/1000).toFixed(2)+"B" : v>=1 ? "€"+v.toFixed(1)+"M" : "€"+Math.round(v*1000)+"K";
-
-function openClub(c){
-  state.club = c; state.style = c.style; state.budget = c.budget; state.rPos = null; state.ePos = null; state.tab = "audit";
-  try{ localStorage.setItem("sc-last-club", c.id); }catch(e){}
-  $("#clubId").innerHTML = `${crest(c)}<div><b>${esc(c.name)}</b>${lgTag(c.lg)}</div>`;
-  $("#style").value = c.style; $("#budget").value = c.budget;
-  $("#welcome").classList.add("hidden"); $("#app").classList.remove("hidden");
-  switchTab("audit");
-}
-$("#switchClub").onclick = ()=>{
-  $("#app").classList.add("hidden"); $("#welcome").classList.remove("hidden");
-  $("#clubInput").value = ""; chosen = null; $("#goBtn").disabled = true; $("#clubInput").focus(); window.scrollTo(0,0);
-};
-
-function styleFit(p, style){
-  const w = STYLES[style];
-  if(p.pos==="GK") return Math.round(clamp(55 + (p.pass-55)*w.pass/4 + (p.phys-55)*w.phys/5 + 12, 30, 95));
-  return Math.round((w.press*p.press + w.pass*p.pass + w.pace*p.pace + w.phys*p.phys)/(w.press+w.pass+w.pace+w.phys));
-}
-function fitBar(v){
-  const col = v>=70 ? "var(--accent)" : v>=58 ? "var(--warn)" : "var(--bad)";
-  return `<span class="fit"><i><b style="width:${v}%;background:${col}"></b></i>${v}</span>`;
-}
-const ovrColor = r => r>=82 ? "var(--accent2)" : r>=75 ? "var(--accent)" : r>=68 ? "var(--warn)" : "var(--muted)";
-const available = pos => club().squad.filter(p=>p.pos===pos && !p.injured);
-const starter = pos => available(pos).sort((a,b)=>b.rating-a.rating)[0];
-function weakestPos(){
-  let best=null, score=Infinity;
-  POS.forEach(pos=>{ const s=starter(pos); const sc=(s?s.rating:50)+available(pos).length/TARGET_DEPTH[pos]*8; if(sc<score){score=sc;best=pos;} });
-  return best;
-}
-
-/* ----- squad audit ----- */
-function renderKPIs(){
-  const sq = club().squad;
-  $("#dataNote").innerHTML = club().real
-    ? `<div class="alert info"><p>📊 <b>Real squad:</b> ${sq.length} players and Transfermarkt market values as of <b>${REAL_DATA.asOf}</b>. Moves after that date (summer 2026 window) aren't included. Ratings, style attributes and wages are SquadCraft estimates. Click a name to open the Transfermarkt profile.</p></div>`
-    : `<div class="alert"><p>⚠️ <b>${esc(club().name)} were promoted from the second tier.</b> The dataset only covers top-flight squads, so this squad is <b>simulated</b> (made-up players). Recruitment targets and buyers still come from real top-flight players.</p></div>`;
-  const total = sq.reduce((a,p)=>a+p.value,0);
-  const avgAge = sq.reduce((a,p)=>a+p.age,0)/sq.length;
-  $("#kpis").innerHTML = [
-    ["Squad value", money(total)], ["Average age", avgAge.toFixed(1)],
-    ["Contracts expiring ≤ "+(YEAR+1), sq.filter(p=>p.contract<=YEAR+1).length],
-    ["Long-term injuries", sq.filter(p=>p.injured).length],
-    ["Style mismatches", sq.filter(p=>styleFit(p,state.style)<58).length]
-  ].map(([l,v])=>`<div class="panel kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join("");
-}
-function renderDepth(){
-  $("#depth").innerHTML = POS.map(pos=>{
-    const n = available(pos).length, t = TARGET_DEPTH[pos], s = starter(pos);
-    const col = n>=t ? "var(--accent)" : n===t-1 ? "var(--warn)" : "var(--bad)";
-    return `<div class="pos" data-pos="${pos}" title="${POS_NAME[pos]}"><b>${pos}</b><div class="bar"><i style="width:${Math.min(100,n/t*100)}%;background:${col}"></i></div><small>${n}/${t} · best ${s?s.rating:"–"}</small></div>`;
-  }).join("");
-  document.querySelectorAll(".pos").forEach(el=>el.onclick=()=>{ state.rPos = el.dataset.pos; switchTab("recruit"); });
-}
-function flags(p){
-  const f=[];
-  if(p.injured) f.push(`<span class="tag t-bad">Injured</span>`);
-  if(p.contract<=YEAR+1) f.push(`<span class="tag t-warn">Expiring</span>`);
-  if(p.age>=31) f.push(`<span class="tag t-info">Aging</span>`);
-  if(p.age<=21 && p.potential-p.rating>=8) f.push(`<span class="tag t-ok">Prospect</span>`);
-  if(styleFit(p,state.style)<58) f.push(`<span class="tag t-bad">Style mismatch</span>`);
-  return f.join("");
-}
-const COLS = [["name","Player"],["pos","Pos"],["age","Age","num"],["value","Market value","num"],["rating","Est. OVR","num"],["potential","Est. POT","num"],["fit","Style fit","num"],["wage","Est. wage/wk","num"],["contract","Contract","num"],["flags","Flags"],["act",""]];
-function renderRoster(){
-  const rows = club().squad.map(p=>({...p, fit:styleFit(p,state.style)}));
-  const k = state.sortKey;
-  rows.sort((a,b)=>{
-    if(k==="pos") return (POS.indexOf(a.pos)-POS.indexOf(b.pos))*state.sortDir || b.rating-a.rating;
-    const av=a[k], bv=b[k];
-    return (typeof av==="string" ? av.localeCompare(bv) : av-bv)*state.sortDir;
-  });
-  $("#roster").innerHTML = `<thead><tr>${COLS.map(([key,l,c])=>`<th class="${c||""}" data-k="${key}">${l}${state.sortKey===key?(state.sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
-  <tbody>${rows.map(p=>`<tr class="${p.injured?"injured":""}" data-id="${p.id}">
-    <td><b>${tmLink(p)}</b>${p.sub?`<div class="meta">${esc(p.sub)}${p.nat?" · "+esc(p.nat):""}</div>`:""}</td><td>${p.pos}</td><td class="num">${p.age}</td>
-    <td class="num" style="font-weight:600">${money(p.value)}</td>
-    <td class="num" style="color:${ovrColor(p.rating)};font-weight:600">${p.rating}</td><td class="num">${p.potential}</td>
-    <td class="num">${fitBar(p.fit)}</td>
-    <td class="num">€${p.wage}k</td><td class="num">${p.contract}</td><td>${flags(p)}</td>
-    <td><button class="btn ${p.injured?"":"danger"}" data-inj="${p.id}">${p.injured?"Mark fit":"Injure"}</button></td></tr>`).join("")}</tbody>`;
-  document.querySelectorAll("#roster th").forEach(th=>th.onclick=()=>{
-    const key=th.dataset.k; if(key==="flags"||key==="act") return;
-    if(state.sortKey===key) state.sortDir*=-1; else { state.sortKey=key; state.sortDir=(key==="name"||key==="pos")?1:-1; }
-    renderRoster();
-  });
-  document.querySelectorAll("[data-inj]").forEach(b=>b.onclick=()=>{
-    const p = club().squad.find(x=>x.id===b.dataset.inj);
-    p.injured = !p.injured; if(p.injured) state.ePos = p.pos;
-    renderAll();
-  });
-}
-
-/* ----- recruitment ----- */
-function card(p, sub, right, why){
-  return `<div class="card"><div class="ovr" style="color:${ovrColor(p.rating)}">${p.rating}</div>
-    <div><h3>${tmLink(p)}</h3><div class="meta">${sub}</div><div class="why">${why}</div></div>
-    <div class="right">${right}</div></div>`;
-}
-function renderRecruit(){
-  if(!state.rPos) state.rPos = weakestPos();
-  $("#rPos").innerHTML = POS.map(p=>`<option value="${p}" ${p===state.rPos?"selected":""}>${p} — ${POS_NAME[p]}</option>`).join("");
-  $("#rLeague").innerHTML = [["ALL","All top 5 leagues"],...Object.entries(LEAGUES).map(([k,v])=>[k,v.name])].map(([k,l])=>`<option value="${k}" ${k===state.rLeague?"selected":""}>${l}</option>`).join("");
-  const s = starter(state.rPos), sR = s ? s.rating : 0;
-  $("#starterBox").innerHTML = s ? `Current ${POS_NAME[state.rPos].toLowerCase()} starter: <b style="color:var(--text)">${esc(s.name)}</b> · OVR ${s.rating} · ${s.age} yrs` : `<span style="color:var(--bad)">No fit ${POS_NAME[state.rPos].toLowerCase()} available</span>`;
-  $("#youngFeeVal").textContent = "€"+$("#youngFee").value+"M";
-  $("#recruitNote").innerHTML = state.window==="closed"
-    ? `<p>⛔ <b>Transfer window closed.</b> These lists are for planning the next window. For urgent cover use <b>Emergency Free Agents</b>.</p><button class="btn primary" onclick="switchTab('emergency')">Go to free agents</button>`
-    : `<p>Targets for <b>${POS_NAME[state.rPos]}</b> from ${CLUBS.filter(c=>c.real && c.id!==club().id).length} clubs with real squad data, under a <b>${state.style}</b> manager (${STYLES[state.style].desc}). Budget: <b>€${state.budget}M</b>.</p>`;
-
-  const pool = ALL_PLAYERS.filter(p=>p.pos===state.rPos && p.clubId!==club().id && (state.rLeague==="ALL"||p.lg===state.rLeague))
-    .map(p=>({...p, fit:styleFit(p,state.style)}));
-  const sub = p => `${p.pos} · ${p.age} yrs · POT ${p.potential} · ${esc(p.club)} ${lgTag(p.lg)}`;
-  const price = p => `<div class="price">${money(p.value)}</div><div class="meta">€${p.wage}k/wk</div>`;
-
-  const up = pool.filter(p=>p.rating>sR && p.value<=state.budget)
-    .sort((a,b)=>(b.rating*2+b.fit*0.5)-(a.rating*2+a.fit*0.5)).slice(0,6);
-  $("#upgradeList").innerHTML = up.length ? up.map(p=>card(p, sub(p), price(p),
-      `<span class="tag t-ok">+${p.rating-sR} OVR vs starter</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit} · ${state.style}</span>`)).join("")
-    : `<div class="empty">No player beats your starter within €${state.budget}M. Try raising the budget.</div>`;
-
-  const maxAge = +$("#youngAge").value, cap = +$("#youngFee").value;
-  const young = pool.filter(p=>p.age<=maxAge && p.value<=cap && p.potential>=sR)
-    .sort((a,b)=>(b.potential*2+b.fit*0.4)-(a.potential*2+a.fit*0.4)).slice(0,6);
-  $("#youngList").innerHTML = young.length ? young.map(p=>card(p, sub(p), price(p),
-      `<span class="tag t-info">Ceiling ${p.potential}</span>${s && s.age>=29 ? `<span class="tag t-warn">Successor to ${esc(s.name.split(" ").slice(-1)[0])} (${s.age})</span>` : ""}<span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`)).join("")
-    : `<div class="empty">No young player with potential ≥ ${sR} under €${cap}M. Try a higher fee cap or age.</div>`;
-}
-
-/* ----- emergency free agents ----- */
-function renderEmergency(){
-  const injured = club().squad.filter(p=>p.injured);
-  $("#injBadge").textContent = injured.length; $("#injBadge").classList.toggle("hidden", !injured.length);
-  if(!state.ePos) state.ePos = injured[0]?.pos || weakestPos();
-  $("#ePos").innerHTML = POS.map(p=>`<option value="${p}" ${p===state.ePos?"selected":""}>${p} — ${POS_NAME[p]}</option>`).join("");
-  const ref = injured.find(p=>p.pos===state.ePos);
-  $("#emergencyAlert").innerHTML = injured.length
-    ? `<div class="alert"><p>🚨 <b>${injured.length} long-term injur${injured.length>1?"ies":"y"}:</b> ${injured.map(p=>`${esc(p.name)} (${p.pos}, OVR ${p.rating})`).join(", ")}. ${state.window==="closed"?"Window is closed — only free agents can be signed.":"Window is open, but free agents are the fastest, cheapest cover."}</p></div>`
-    : `<div class="alert info"><p>No injuries right now. In <b>Squad Audit</b>, press <b>Injure</b> on a player to simulate a crisis — this list updates automatically.</p></div>`;
-  const maxWage = +$("#wage").value, allowOld = $("#unfit").checked, onlyVerified = $("#verified").checked;
-  const target = ref ? ref.rating : (starter(state.ePos)?.rating || 70);
-  const list = FREE_AGENTS.filter(p=>p.pos===state.ePos && p.wage<=maxWage && (allowOld || p.age<=32) && (!onlyVerified || p.status==="verified"))
-    .map(p=>({...p, fit:styleFit(p,state.style)}))
-    .sort((a,b)=>(b.rating*1.5+b.fit*0.6-Math.abs(b.rating-target)*0.8)-(a.rating*1.5+a.fit*0.6-Math.abs(a.rating-target)*0.8))
-    .slice(0,12);
-  $("#faCount").textContent = "top "+list.length;
-  $("#faList").innerHTML = list.length ? list.map(p=>{
-    const d = p.rating-target;
-    const st = p.status==="verified"
-      ? `<span class="tag t-ok">Free agent · verified ${REAL_DATA.faAsOf}${p.freeSince?" · since "+esc(p.freeSince):""}</span>`
-      : `<span class="tag t-warn">Reported free early Sep 2026 · verify</span>`;
-    return card(p, `${esc(p.sub)} · ${p.age} yrs${p.nat?" · "+esc(p.nat):""} · last club: ${esc(p.lastClub)}`,
-      `<div class="price">€${p.wage}k<span class="meta">/wk est.</span></div><div class="meta">No fee · value ${money(p.value)}</div>`,
-      `${st}<span class="tag ${d>=0?"t-ok":"t-warn"}">${d>=0?"+":""}${d} vs ${ref?"injured player":"starter"}</span><span class="tag ${p.fit>=70?"t-ok":"t-warn"}">Fit ${p.fit}</span>`);
-  }).join("") : `<div class="empty">No out-of-contract players match. Raise the wage bracket or include players over 32.</div>`;
-}
-
-/* ----- offload planner ----- */
-function needsAt(c, pos, rating){
-  const s = c.squad.filter(p=>p.pos===pos).sort((a,b)=>b.rating-a.rating);
-  return s.length < TARGET_DEPTH[pos] || (s[0] && s[0].rating < rating + 2);
-}
-function renderOffload(){
-  const changed = state.style !== club().style;
-  $("#offloadIntro").innerHTML = `Players who fit poorly in a <b>${state.style}</b> system (${STYLES[state.style].desc}), matched to clubs across the top 5 leagues whose style, squad needs and budget suit them. ${changed?`<b>Manager change:</b> ${club().style} → ${state.style}.`:"Tip: change the manager playstyle above to see who becomes surplus."}`;
-  const out = club().squad.filter(p=>!p.injured).map(p=>({...p, fit:styleFit(p,state.style)}))
-    .filter(p=>p.fit<60 && !(p.age<=21 && p.potential-p.rating>=8)).sort((a,b)=>a.fit-b.fit).slice(0,8);
-  $("#offloadList").innerHTML = out.length ? out.map(p=>{
-    const buyers = CLUBS.filter(c=>c.id!==club().id && c.budget>=p.value).map(c=>{
-      const f = styleFit(p,c.style), need = needsAt(c,p.pos,p.rating);
-      return {c, f, need, score: f*0.7 + (need?25:0) - Math.abs(c.str-p.rating)*0.8};
-    }).filter(b=>b.f>p.fit).sort((a,b)=>b.score-a.score).slice(0,3);
-    return card(p, `${p.pos} · ${p.age} yrs · POT ${p.potential}`,
-      `<div class="price">${money(p.value)}</div><div class="meta">asking price</div>`,
-      `<span class="tag t-bad">Fit ${p.fit} in ${state.style}</span>${flags(p)}
-       <div class="buyers">${buyers.length ? buyers.map(b=>`<span class="buyer">${esc(b.c.name)} ${lgTag(b.c.lg)} · ${b.c.style} · fit <b>${b.f}</b>${b.need?" · needs "+p.pos:""}</span>`).join("") : `<span class="buyer">No suitable buyer can afford ${money(p.value)} — consider a loan</span>`}</div>`);
-  }).join("") : `<div class="empty">Every available player fits the ${state.style} system reasonably well. Nothing to offload.</div>`;
-}
-
-/* ----- wiring ----- */
-function switchTab(t){
-  state.tab = t;
-  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected", b.dataset.tab===t));
-  ["audit","recruit","emergency","offload"].forEach(x=>$("#tab-"+x).classList.toggle("hidden", x!==t));
-  renderAll(); window.scrollTo({top:0});
-}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
-function renderAll(){
-  if(!club()) return;
-  $("#budgetVal").textContent = "€"+state.budget+"M";
-  renderKPIs(); renderDepth(); renderRoster(); renderRecruit(); renderEmergency(); renderOffload();
-}
-$("#style").innerHTML = Object.keys(STYLES).map(s=>`<option>${s}</option>`).join("");
-$("#style").onchange = e=>{ state.style=e.target.value; renderAll(); };
-$("#window").onchange = e=>{ state.window=e.target.value; renderAll(); };
-$("#budget").oninput = e=>{ state.budget=+e.target.value; renderAll(); };
-$("#rPos").onchange = e=>{ state.rPos=e.target.value; renderRecruit(); };
-$("#rLeague").onchange = e=>{ state.rLeague=e.target.value; renderRecruit(); };
-$("#youngAge").onchange = renderRecruit;
-$("#youngFee").oninput = renderRecruit;
-$("#ePos").onchange = e=>{ state.ePos=e.target.value; renderEmergency(); };
-$("#wage").onchange = renderEmergency;
-$("#unfit").onchange = renderEmergency;
-$("#verified").onchange = renderEmergency;
-
-</script>
+<script src="config.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
