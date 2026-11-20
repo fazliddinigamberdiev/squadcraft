@@ -67,7 +67,17 @@ const rpc = (fn, args) => api("rpc/" + fn, { method: "POST", body: args || {} })
 /* ---------- small helpers ---------- */
 const CREST_COL = ["#3ddc84", "#5cc8ff", "#ffb547", "#ff6b4a", "#a46cff", "#c6f432", "#ff4d6d", "#4be1d4", "#f5f5f5"];
 const crestCol = c => CREST_COL[((c.name || "").length + (c.code || "X").charCodeAt(0)) % CREST_COL.length];
-const crest = c => `<span class="crest" style="background:${crestCol(c)}">${esc(c.code)}</span>`;
+// club badge: the logo image when the database has logo_url and the file exists, otherwise a colored code badge
+const logoOf = c => c.logo_url || ((S.clubs.find(x => x.id === c.id) || {}).logo_url) || null;
+const crest = c => {
+  const l = c.id ? logoOf(c) : null;
+  return `<span class="crest${l ? " has-logo" : ""}" style="background:${crestCol(c)}">${l ? `<img src="${esc(l)}" alt="" loading="lazy">` : ""}${esc(c.code)}</span>`;
+};
+// if a logo file is missing, drop the image and show the code badge again
+document.addEventListener("error", e => {
+  const t = e.target;
+  if (t && t.tagName === "IMG" && t.parentElement && t.parentElement.classList.contains("has-logo")) { t.parentElement.classList.remove("has-logo"); t.remove(); }
+}, true);
 const money = v => { v = Number(v); return v >= 1000 ? "€" + (v / 1000).toFixed(2) + "B" : v >= 1 ? "€" + v.toFixed(1) + "M" : "€" + Math.round(v * 1000) + "K"; };
 const ovrColor = r => r >= 82 ? "var(--accent2)" : r >= 75 ? "var(--accent)" : r >= 68 ? "var(--warn)" : "var(--muted)";
 const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
