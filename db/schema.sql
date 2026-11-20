@@ -146,8 +146,52 @@ create policy "own players select" on roster_players for select to anon, authent
 create policy "own players insert" on roster_players for insert to anon, authenticated
   with check (owner_token = (select fn_owner_token())
               and exists (select 1 from rosters r where r.id = roster_players.roster_id and r.owner_token = (select fn_owner_token())));
-create policy "own players update" on roster_players for update to anon, authenticated using (owner_token = (select fn_owner_token())) with check (owner_token = (select fn_owner_token()));
+create policy "own players update" on roster_players for update to anon, authenticated
+  using (owner_token = (select fn_owner_token()))
+  with check (owner_token = (select fn_owner_token())
+              and exists (select 1 from rosters r where r.id = roster_players.roster_id and r.owner_token = (select fn_owner_token())));
 create policy "own players delete" on roster_players for delete to anon, authenticated using (owner_token = (select fn_owner_token()));
+
+-- ===================== hardening (found by security review) =====================
+-- 1. A player row may never be moved to another squad or owner (otherwise a user could stuff rows into someone else's squad,
+--    where the victim cannot see them but they count toward the 60-player limit).
+create or replace function tg_lock_roster_players() returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.roster_id is distinct from old.roster_id or new.owner_token is distinct from old.owner_token then
+    raise exception 'A player cannot be moved to another squad.';
+  end if;
+  return new;
+end $$;
+drop trigger if exists roster_players_lock on roster_players;
+create trigger roster_players_lock before update on roster_players for each row execute function tg_lock_roster_players();
+
+-- same for rosters: owner_token can never change
+create or replace function tg_lock_rosters() returns trigger language plpgsql set search_path = public as $$
+begin
+  if new.owner_token is distinct from old.owner_token then raise exception 'A squad cannot change owner.'; end if;
+  return new;
+end $$;
+drop trigger if exists rosters_lock on rosters;
+create trigger rosters_lock before update on rosters for each row execute function tg_lock_rosters();
+
+-- 2. no blank names
+alter table rosters drop constraint if exists rosters_name_not_blank;
+alter table rosters add constraint rosters_name_not_blank check (btrim(name) <> '');
+alter table roster_players drop constraint if exists roster_players_name_not_blank;
+alter table roster_players add constraint roster_players_name_not_blank check (btrim(name) <> '');
+
+-- 3. global cap on stored squads (anyone can create new access keys, so per-key limits alone do not bound storage).
+--    SECURITY DEFINER only so the count sees all users' rows; it returns nothing and cannot be called through the API.
+create or replace function tg_global_cap_rosters() returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if (select count(*) from public.rosters) >= 3000 then
+    raise exception 'The demo database is full. Please try again later.';
+  end if;
+  return new;
+end $$;
+revoke execute on function tg_global_cap_rosters() from public, anon, authenticated;
+drop trigger if exists rosters_global_cap on rosters;
+create trigger rosters_global_cap before insert on rosters for each row execute function tg_global_cap_rosters();
 
 -- ===================== views (security_invoker: they obey the caller's RLS) =====================
 create or replace view v_club_summary with (security_invoker = true) as
