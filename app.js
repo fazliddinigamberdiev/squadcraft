@@ -48,11 +48,15 @@ async function api(path, opts) {
   };
   if (o.prefer) headers.Prefer = o.prefer;
   let res;
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 25000);
   try {
-    res = await fetch(CFG.url + "/rest/v1/" + path, { method: o.method || "GET", headers, body: o.body === undefined ? undefined : JSON.stringify(o.body) });
+    res = await fetch(CFG.url + "/rest/v1/" + path, { method: o.method || "GET", headers, signal: ctl.signal, body: o.body === undefined ? undefined : JSON.stringify(o.body) });
   } catch (e) {
-    throw new Error("Cannot reach the database. Check your internet connection (or restore the Supabase project if it is paused).");
-  }
+    throw new Error(e && e.name === "AbortError"
+      ? "The database took too long to answer. Try again in a moment."
+      : "Cannot reach the database. Check your internet connection (or restore the Supabase project if it is paused).");
+  } finally { clearTimeout(timer); }
   const text = await res.text();
   let data = null;
   if (text) { try { data = JSON.parse(text); } catch (e) { data = text; } }
@@ -84,7 +88,7 @@ const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
 const lgName = code => (S.leagues[code] && S.leagues[code].name) || code;
 const lgTag = code => `<span class="lg lg-${esc(code)}">${esc(lgName(code))}</span>`;
 const tmLink = p => (p.tm_id && p.tm_slug)
-  ? `<a class="pl" href="https://www.transfermarkt.com/${encodeURIComponent(p.tm_slug)}/profil/spieler/${encodeURIComponent(p.tm_id)}" target="_blank" rel="noopener" title="Open Transfermarkt profile">${esc(p.name)}</a>`
+  ? `<a class="pl" href="https://www.transfermarkt.com/${encodeURIComponent(p.tm_slug)}/profil/spieler/${encodeURIComponent(p.tm_id)}" target="_blank" rel="noopener noreferrer" title="Open Transfermarkt profile">${esc(p.name)}</a>`
   : esc(p.name);
 const monthYear = d => { try { return new Date(d + "T00:00:00Z").toLocaleString("en", { month: "short", year: "numeric", timeZone: "UTC" }); } catch (e) { return d; } };
 const fitBar = v => {
@@ -98,6 +102,12 @@ function toast(msg, ok) {
   t.className = "toast" + (ok ? " ok" : "");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.add("hidden"), ok ? 3000 : 6000);
+}
+// run fn once at a time per button: ignores double clicks while a request is pending
+async function guarded(btn, fn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try { await fn(); } finally { btn.disabled = false; }
 }
 const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
 const setSelect = (el, items, value) => {
@@ -183,7 +193,6 @@ async function openClub(c, fresh) {
 async function loadWorkspace(id) {
   const ov = await rpc("fn_workspace_overview", { p_roster: id });
   S.ws = id; S.ov = ov; S.rPos = null; S.ePos = null; S.editing = null;
-  try { localStorage.setItem("sc-last-ws", id); } catch (e) { /* ignore */ }
   const w = ov.workspace, club = ov.club;
   $("#clubId").innerHTML = (club ? crest(club) : `<span class="crest" style="background:#8fa39a">SQ</span>`) +
     `<div><b>${esc(w.name)}</b>${club ? lgTag(club.lg) : `<span class="meta">Custom squad</span>`}</div>`;
@@ -233,7 +242,6 @@ function renderAudit() {
     ? `<div class="alert"><p>⚠️ <b>Thin depth</b> (fewer than 2 players): ${thin.map(d => `<b>${esc(d.pos)}</b> ${esc(posName(d.pos))} (${d.n_total})`).join(" · ")}</p></div>`
     : `<div class="alert info"><p>✅ No thin positions: every position group has at least 2 players.</p></div>`;
 
-  $("#kpis").style.gridTemplateColumns = "repeat(6,minmax(0,1fr))";
   $("#kpis").innerHTML = [
     ["Players", k.squad_size], ["Squad value", money(k.squad_value_m)], ["Average age", k.avg_age == null ? "–" : Number(k.avg_age).toFixed(1)],
     ["Contracts expiring ≤ 2027", k.contracts_expiring], ["Long-term injuries", k.injuries], ["Style mismatches", k.style_mismatches]
@@ -320,13 +328,18 @@ async function submitForm(e) {
   if (!body.name) return toast("Enter a name.");
   for (const k of ["age", "market_value_m", "est_rating", "est_wage_k", "press", "passing", "pace", "physical"]) if (body[k] == null || Number.isNaN(body[k])) return toast("Fill in every number field (only the contract year can stay empty).");
   if (body.est_potential < body.est_rating) return toast("Potential cannot be lower than the rating.");
+  for (const k of ["age", "est_rating", "est_potential", "press", "passing", "pace", "physical"]) if (!Number.isInteger(body[k])) return toast("Age, rating, potential and style attributes must be whole numbers.");
+  if (body.contract_until != null && !Number.isInteger(body.contract_until)) return toast("Contract year must be a whole number.");
+  const submitBtn = e.submitter || document.querySelector("#pf button[type=submit]");
+  if (submitBtn && submitBtn.disabled) return;
+  if (submitBtn) submitBtn.disabled = true;
   try {
     if (S.editing) await api("roster_players?id=eq." + encodeURIComponent(S.editing), { method: "PATCH", body, prefer: "return=minimal" });
     else await api("roster_players", { method: "POST", body: Object.assign({ roster_id: S.ws }, body), prefer: "return=minimal" });
     toast(S.editing ? "Player updated." : "Player added.", true);
     closeForm();
     await refresh();
-  } catch (err) { toast(err.message); }
+  } catch (err) { toast(err.message); if (submitBtn) submitBtn.disabled = false; }
 }
 
 /* =================== RECRUITMENT (S2) =================== */
@@ -452,24 +465,27 @@ function switchTab(t) {
   window.scrollTo({ top: 0 });
 }
 async function signTm(btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
   try {
     await rpc("fn_add_from_database", { p_roster: S.ws, p_tm_id: Number(btn.dataset.signTm) });
     toast("Added " + btn.dataset.name + " to your squad.", true);
     await refresh();
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message); btn.disabled = false; }
 }
 async function signFa(btn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
   try {
     await rpc("fn_add_from_database", { p_roster: S.ws, p_free_agent_id: Number(btn.dataset.signFa) });
     toast("Signed " + btn.dataset.name + " (free agent).", true);
     await refresh();
-  } catch (e) { toast(e.message); }
+  } catch (e) { toast(e.message); btn.disabled = false; }
 }
 async function deleteWorkspace(id) {
   if (!window.confirm("Delete this squad from the database? This cannot be undone.")) return;
   try {
     await api("rosters?id=eq." + encodeURIComponent(id), { method: "DELETE", prefer: "return=minimal" });
-    try { if (localStorage.getItem("sc-last-ws") === id) localStorage.removeItem("sc-last-ws"); } catch (e) { /* ignore */ }
     await loadMyWorkspaces();
     toast("Squad deleted.", true);
   } catch (e) { toast(e.message); }
@@ -542,8 +558,13 @@ function wire() {
   };
   $("#style").onchange = async e => { try { await patchWorkspace({ style: e.target.value }); await refresh(); } catch (err) { toast(err.message); } };
   $("#window").onchange = async e => { try { await patchWorkspace({ window_state: e.target.value }); await refresh(); } catch (err) { toast(err.message); } };
-  const saveBudget = debounce(async v => { try { await patchWorkspace({ budget_m: v }); S.ov.workspace.budget_m = v; if (S.tab === "recruit") loadRecruit(); } catch (err) { toast(err.message); } }, 400);
-  $("#budget").oninput = e => { $("#budgetVal").textContent = "€" + e.target.value + "M"; saveBudget(Number(e.target.value)); };
+  const saveBudget = debounce(async (id, v) => {
+    try {
+      await api("rosters?id=eq." + encodeURIComponent(id), { method: "PATCH", body: { budget_m: v }, prefer: "return=minimal" });
+      if (S.ws === id) { S.ov.workspace.budget_m = v; if (S.tab === "recruit") loadRecruit(); }
+    } catch (err) { toast(err.message); }
+  }, 400);
+  $("#budget").oninput = e => { $("#budgetVal").textContent = "€" + e.target.value + "M"; saveBudget(S.ws, Number(e.target.value)); };
   document.querySelectorAll(".tab").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
 
   /* audit */
@@ -597,6 +618,7 @@ function wire() {
     const k = window.prompt("Paste an access key from another device:");
     if (!k) return;
     if (!UUID_RE.test(k.trim())) return toast("That is not a valid access key.");
+    if (k.trim().toLowerCase() !== TOKEN && !window.confirm("Switch to this access key? Your squads under the CURRENT key will not be visible until you switch back, so copy your current key first if you need it.")) return;
     TOKEN = k.trim().toLowerCase();
     try { localStorage.setItem("sc-owner-token", TOKEN); } catch (e) { /* ignore */ }
     $("#app").classList.add("hidden"); $("#welcome").classList.remove("hidden");
