@@ -19,7 +19,7 @@ create table if not exists data_sources (
 create table if not exists clubs (
   id text primary key, league_code text not null references leagues(code), short_code text not null, name text not null unique,
   strength smallint not null check (strength between 0 and 100), default_style text not null references playstyles(name),
-  aliases text not null default '', has_real_squad boolean not null default false,
+  aliases text not null default '', has_real_squad boolean not null default false, logo_url text,
   unique (league_code, short_code), check (id = league_code || '-' || short_code));
 create table if not exists players (
   tm_id integer primary key, name text not null, pos text not null references positions(code),
@@ -183,7 +183,8 @@ create or replace view v_club_profile with (security_invoker = true) as
          case when c.has_real_squad
               then least(250::numeric, greatest(5::numeric, round(coalesce(a.total_value, 0) * 0.2 / 5) * 5))
               else greatest(5::numeric, round((c.strength - 64) * 6 * l.value_multiplier / 5) * 5) end as budget_m,
-         coalesce(a.squad_size, 0) as squad_size
+         coalesce(a.squad_size, 0) as squad_size,
+         c.logo_url
   from clubs c join leagues l on l.code = c.league_code left join agg a on a.club_id = c.id;
 
 -- ===================== privileges (new Supabase projects give anon/authenticated nothing by default) =====================
