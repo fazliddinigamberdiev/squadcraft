@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SquadCraft · TransferMind</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://ereihenyjzpsecbebksg.supabase.co; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <meta name="description" content="SquadCraft TransferMind — football transfer intelligence for clubs in the Premier League, Serie A, LaLiga, Bundesliga and Ligue 1. All data and rules live in a Supabase database.">
 <style>
   :root{
@@ -83,7 +85,7 @@
   main.wrap{padding-top:22px;padding-bottom:60px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
   .grid{display:grid;gap:14px}
-  .kpis{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .kpis{grid-template-columns:repeat(6,minmax(0,1fr))}
   .kpi .v{font-family:"Space Grotesk";font-size:24px;font-weight:600;margin-top:4px}
   .kpi .l{color:var(--muted);font-size:12px}
   .two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
@@ -357,7 +359,7 @@
     SquadCraft — ISE4133 Software Engineering · Team: Rakhmatullaev Umid, Abdullaev Umrbek, Igamberdiev Fazliddin.<br>
     <b>Architecture:</b> this page is a thin client. All data and all rules (depth, thin-depth, upgrades, future-proof, free agents, offload) live in a Supabase PostgreSQL database and run as SQL functions; see <code>db/schema.sql</code>.
     <b>Data:</b> players, positions, ages, nationalities, contracts and market values come from Transfermarkt via the open <a href="https://github.com/dcaribou/transfermarkt-datasets" target="_blank" rel="noopener" style="color:var(--accent)">transfermarkt-datasets</a> project (snapshot 6 July 2026); free agents from <a href="https://transfertracker.ai/free-agents" target="_blank" rel="noopener" style="color:var(--accent)">transfertracker.ai</a> (22 Oct 2026) and news reports (2–4 Sep 2026). Squads of the 14 newly promoted clubs are simulated (made-up players). Est. ratings, potential, style attributes and wages are SquadCraft model estimates, not official figures.
-    <br>Access key: <button class="linkish" id="copyKey" type="button">copy</button> · <button class="linkish" id="useKey" type="button">use another key</button> <span class="meta">(your squads are tied to this key; keep it to open them on another device)</span>
+    <br>Access key: <button class="linkish" id="copyKey" type="button">copy</button> · <button class="linkish" id="useKey" type="button">use another key</button> <span class="meta">(your squads are tied to this key; keep it to open them on another device)</span><br><b>Privacy:</b> no account, no cookies, no tracking. The page stores only a random access key in this browser (localStorage); your squads are saved in the database under that key and are visible only to someone who has it.
   </div>
 </footer>
 </div>
