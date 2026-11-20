@@ -52,5 +52,10 @@ function reply(url, method, body) {
   ok(d.querySelectorAll("#faList .card").length === 1, "free agents rendered");
   d.querySelector('[data-tab="offload"]').click(); await wait(100);
   ok(d.querySelectorAll("#offloadList .card").length === 1, "offload rendered with buyers");
+  d.querySelector('[data-tab="recruit"]').click(); await wait(50);
+  d.querySelector("#upgradeList a.pl").click(); await wait(20);
+  ok(!d.querySelector("#pp").hidden && d.querySelector("#ppBody").textContent.includes("Market value"), "player panel opens on name click");
+  d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape" }));
+  ok(d.querySelector("#pp").hidden, "player panel closes with Escape");
   ok(calls.every(c => !/data\.js/.test(c)), "no data.js use");
 })();

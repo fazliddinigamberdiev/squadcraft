@@ -80,16 +80,64 @@ const crest = c => {
 // if a logo file is missing, drop the image and show the code badge again
 document.addEventListener("error", e => {
   const t = e.target;
-  if (t && t.tagName === "IMG" && t.parentElement && t.parentElement.classList.contains("has-logo")) { t.parentElement.classList.remove("has-logo"); t.remove(); }
+  if (t && t.tagName === "IMG" && t.parentElement) {
+    const pc = t.parentElement.classList;
+    if (pc.contains("has-logo")) { pc.remove("has-logo"); t.remove(); }
+    else if (pc.contains("has-photo")) { pc.remove("has-photo"); t.remove(); }
+  }
 }, true);
 const money = v => { v = Number(v); return v >= 1000 ? "€" + (v / 1000).toFixed(2) + "B" : v >= 1 ? "€" + v.toFixed(1) + "M" : "€" + Math.round(v * 1000) + "K"; };
 const ovrColor = r => r >= 82 ? "var(--accent2)" : r >= 75 ? "var(--accent)" : r >= 68 ? "var(--warn)" : "var(--muted)";
 const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
 const lgName = code => (S.leagues[code] && S.leagues[code].name) || code;
 const lgTag = code => `<span class="lg lg-${esc(code)}">${esc(lgName(code))}</span>`;
-const tmLink = p => (p.tm_id && p.tm_slug)
-  ? `<a class="pl" href="https://www.transfermarkt.com/${encodeURIComponent(p.tm_slug)}/profil/spieler/${encodeURIComponent(p.tm_id)}" target="_blank" rel="noopener noreferrer" title="Open Transfermarkt profile">${esc(p.name)}</a>`
-  : esc(p.name);
+const tmUrl = p => (p.tm_id && p.tm_slug) ? `https://www.transfermarkt.com/${encodeURIComponent(p.tm_slug)}/profil/spieler/${encodeURIComponent(p.tm_id)}` : null;
+// every player name is a link that opens the in-app player panel; the player object is kept here so the click can find it
+const PL = new Map();
+let plSeq = 0;
+const tmLink = p => {
+  if (PL.size > 4000) PL.clear();
+  const k = String(++plSeq); PL.set(k, p);
+  return `<a class="pl" href="${tmUrl(p) || "#"}" data-pk="${k}" title="Show player details">${esc(p.name)}</a>`;
+};
+document.addEventListener("click", e => {
+  const a = e.target.closest && e.target.closest("a.pl[data-pk]");
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  e.preventDefault();
+  const p = PL.get(a.dataset.pk);
+  if (p) openPlayer(p);
+});
+function initials(n) { return String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase(); }
+function openPlayer(p) {
+  const box = $("#pp"); if (!box) return;
+  const url = tmUrl(p);
+  const row = (l, v) => v == null || v === "" ? "" : `<div class="r"><span>${l}</span><b>${v}</b></div>`;
+  const club = p.club_name || p.club || "";
+  $("#ppBody").innerHTML = `
+    <div class="pp-head">
+      <span class="pp-photo${p.photo_url ? " has-photo" : ""}">${p.photo_url ? `<img src="${esc(p.photo_url)}" alt="">` : ""}<i>${esc(initials(p.name))}</i></span>
+      <div><h3 id="ppTitle">${esc(p.name)}</h3>
+        <div class="meta">${esc(p.sub_position || p.pos || "")}${p.nationality ? " · " + esc(p.nationality) : ""}${club ? " · " + esc(club) : ""}</div>
+        <div style="margin-top:6px">${typeof flagsHtml === "function" ? flagsHtml(p) : ""}</div></div>
+    </div>
+    <div class="pp-grid">
+      ${row("Position", esc(p.pos))}${row("Age", p.age)}
+      ${row("Market value", p.market_value_m != null ? money(p.market_value_m) : null)}
+      ${row("Est. wage / week", p.est_wage_k != null ? "€" + Number(p.est_wage_k) + "k" : null)}
+      ${row("Est. rating", p.est_rating != null ? `<span style="color:${ovrColor(p.est_rating)}">${p.est_rating}</span>` : null)}
+      ${row("Est. potential", p.est_potential)}
+      ${row("Style fit", p.style_fit != null ? fitBar(p.style_fit) : null)}
+      ${row("Contract until", p.contract_until == null ? "–" : esc(p.contract_until))}
+    </div>
+    <div class="pp-foot">${url ? `<a class="btn" href="${url}" target="_blank" rel="noopener noreferrer">View on Transfermarkt ↗</a>` : `<span class="meta">No Transfermarkt page for this player.</span>`}
+      <button class="btn" id="ppClose" type="button">Close</button></div>`;
+  box.hidden = false;
+  $("#ppClose").onclick = closePlayer;
+  $("#ppClose").focus();
+}
+function closePlayer() { const b = $("#pp"); if (b) b.hidden = true; }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePlayer(); });
+document.addEventListener("click", e => { if (e.target && e.target.id === "pp") closePlayer(); });
 const monthYear = d => { try { return new Date(d + "T00:00:00Z").toLocaleString("en", { month: "short", year: "numeric", timeZone: "UTC" }); } catch (e) { return d; } };
 const fitBar = v => {
   const col = v >= 70 ? "var(--accent)" : v >= 58 ? "var(--warn)" : "var(--bad)";
