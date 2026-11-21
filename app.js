@@ -113,9 +113,11 @@ function openPlayer(p) {
   const url = tmUrl(p);
   const row = (l, v) => v == null || v === "" ? "" : `<div class="r"><span>${l}</span><b>${v}</b></div>`;
   const club = p.club_name || p.club || "";
+  // photo files are named after the Transfermarkt id (players/<tm_id>.png); if a file is missing the initials circle shows instead
+  const photo = p.photo_url || (p.tm_id ? "players/" + encodeURIComponent(p.tm_id) + ".png" : null);
   $("#ppBody").innerHTML = `
     <div class="pp-head">
-      <span class="pp-photo${p.photo_url ? " has-photo" : ""}">${p.photo_url ? `<img src="${esc(p.photo_url)}" alt="">` : ""}<i>${esc(initials(p.name))}</i></span>
+      <span class="pp-photo${photo ? " has-photo" : ""}">${photo ? `<img src="${esc(photo)}" alt="">` : ""}<i>${esc(initials(p.name))}</i></span>
       <div><h3 id="ppTitle">${esc(p.name)}</h3>
         <div class="meta">${esc(p.sub_position || p.pos || "")}${p.nationality ? " · " + esc(p.nationality) : ""}${club ? " · " + esc(club) : ""}</div>
         <div style="margin-top:6px">${typeof flagsHtml === "function" ? flagsHtml(p) : ""}</div></div>

@@ -2,4 +2,9 @@ node_modules/
 node_modules/
 logos/_done*.json
 logos/_report.txt
+
+# API work files (not part of the app)
+squads.json
+teams_by_country.json
+squad_test.json
 .DS_Store
