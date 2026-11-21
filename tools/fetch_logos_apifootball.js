@@ -14,7 +14,7 @@ const norm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ
 const STOP = new Set(["fc", "cf", "afc", "ac", "as", "sc", "ssc", "us", "sv", "vfb", "vfl", "tsg", "club", "calcio", "de", "la", "el", "1", "05", "07", "04", "1899", "1907", "1913", "09"]);
 const words = t => norm(t).split(" ").filter(w => w && !STOP.has(w));
 // search words that differ from our display names
-const SEARCH = { "BL-TSG": "Hoffenheim", "L1-RCL": "Lens", "L1-RCS": "Strasbourg", "L1-REN": "Rennes", "LL-ALA": "Alaves", "PL-COV": "Coventry", "PL-IPS": "Ipswich", "PL-LEE": "Leeds", "SA-INT": "Inter", "SA-MIL": "AC Milan", "L1-PSG": "Paris Saint Germain", "L1-OM": "Marseille", "L1-OL": "Lyon", "BL-FCB": "Bayern Munich",
+const SEARCH = { "BL-TSG": "Hoffenheim", "L1-RCL": "Lens", "L1-RCS": "Strasbourg", "L1-REN": "Rennes", "LL-ALA": "Alaves", "PL-COV": "Coventry", "PL-IPS": "Ipswich", "PL-LEE": "Leeds", "SA-INT": "Inter", "SA-MIL": "AC Milan", "L1-PSG": "Paris Saint Germain", "L1-OM": "Marseille", "L1-OL": "Lyon", "BL-FCB": "Bayern",
   "BL-BVB": "Borussia Dortmund", "BL-BMG": "Borussia Monchengladbach", "BL-KOE": "FC Koln", "BL-SVW": "Werder Bremen", "LL-ATH": "Athletic Club",
   "LL-ATM": "Atletico Madrid", "LL-BAR": "Barcelona", "LL-RSO": "Real Sociedad", "L1-ASM": "Monaco", "L1-BRE": "Brest", "L1-NIC": "Nice",
   "PL-BHA": "Brighton", "PL-MCI": "Manchester City", "PL-MUN": "Manchester United", "PL-NEW": "Newcastle", "PL-NFO": "Nottingham Forest", "PL-TOT": "Tottenham" };
