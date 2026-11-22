@@ -57,5 +57,6 @@ function reply(url, method, body) {
   ok(!d.querySelector("#pp").hidden && d.querySelector("#ppBody").textContent.includes("Market value"), "player panel opens on name click");
   d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape" }));
   ok(d.querySelector("#pp").hidden, "player panel closes with Escape");
+  ok(d.querySelectorAll("#roster .av").length > 0, "roster rows show a player avatar");
   ok(calls.every(c => !/data\.js/.test(c)), "no data.js use");
 })();
