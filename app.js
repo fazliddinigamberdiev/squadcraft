@@ -285,7 +285,7 @@ function renderAudit() {
   $("#dataNote").innerHTML = !club
     ? `<div class="alert info"><p>🛠️ <b>Your own squad.</b> Add players with “＋ Add player” or sign them from the Recruitment and Emergency tabs. Everything you change is saved in the database.</p></div>`
     : club.is_real
-      ? `<div class="alert info"><p>📊 <b>Real squad copy:</b> ${plural(k.squad_size, "player")} with Transfermarkt market values as of <b>6 July 2026</b>. This is your own editable copy: injuries and changes do not affect other users. Ratings, style attributes and wages are SquadCraft estimates. Click a name to open the Transfermarkt profile.</p></div>`
+      ? `<div class="alert info"><p>📊 <b>Real squad copy:</b> ${plural(k.squad_size, "player")} with Transfermarkt market values as of <b>6 July 2026</b>. This is your own editable copy: injuries and changes do not affect other users. Ratings, style attributes and wages are SquadCraft estimates. Click a name for player details and the Transfermarkt link.</p></div>`
       : `<div class="alert"><p>⚠️ <b>${esc(club.name)} were promoted from the second tier.</b> The dataset only covers top-flight squads, so this squad is <b>simulated</b> (made-up players generated inside the database). Recruitment targets and buyers still come from real top-flight players.</p></div>`;
 
   const thin = ov.depth.filter(d => d.thin_depth);
