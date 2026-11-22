@@ -113,6 +113,9 @@ const avatar = (p, cls) => { const ph = photoOf(p); return `<span class="av ${cl
 function initials(n) { return String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase(); }
 function openPlayer(p) {
   const box = $("#pp"); if (!box) return;
+  // the position cards carry only a few fields: use the full roster row for the same player when we have it
+  const full = S.ov && S.ov.roster && S.ov.roster.find(x => p.id != null && String(x.id) === String(p.id));
+  if (full) p = Object.assign({}, p, full);
   const url = tmUrl(p);
   const row = (l, v) => v == null || v === "" ? "" : `<div class="r"><span>${l}</span><b>${v}</b></div>`;
   const club = p.club_name || p.club || "";
