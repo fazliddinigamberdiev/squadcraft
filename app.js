@@ -107,17 +107,18 @@ document.addEventListener("click", e => {
   const p = PL.get(a.dataset.pk);
   if (p) openPlayer(p);
 });
+const photoOf = p => p.photo_url || (p.tm_id ? "players/" + encodeURIComponent(p.tm_id) + ".png" : null);
+// small round avatar: photo if the file exists, otherwise the player's initials
+const avatar = (p, cls) => { const ph = photoOf(p); return `<span class="av ${cls || ""}${ph ? " has-photo" : ""}">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy">` : ""}<i>${esc(initials(p.name))}</i></span>`; };
 function initials(n) { return String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase(); }
 function openPlayer(p) {
   const box = $("#pp"); if (!box) return;
   const url = tmUrl(p);
   const row = (l, v) => v == null || v === "" ? "" : `<div class="r"><span>${l}</span><b>${v}</b></div>`;
   const club = p.club_name || p.club || "";
-  // photo files are named after the Transfermarkt id (players/<tm_id>.png); if a file is missing the initials circle shows instead
-  const photo = p.photo_url || (p.tm_id ? "players/" + encodeURIComponent(p.tm_id) + ".png" : null);
   $("#ppBody").innerHTML = `
     <div class="pp-head">
-      <span class="pp-photo${photo ? " has-photo" : ""}">${photo ? `<img src="${esc(photo)}" alt="">` : ""}<i>${esc(initials(p.name))}</i></span>
+      ${avatar(p, "pp-photo")}
       <div><h3 id="ppTitle">${esc(p.name)}</h3>
         <div class="meta">${esc(p.sub_position || p.pos || "")}${p.nationality ? " · " + esc(p.nationality) : ""}${club ? " · " + esc(club) : ""}</div>
         <div style="margin-top:6px">${typeof flagsHtml === "function" ? flagsHtml(p) : ""}</div></div>
@@ -327,7 +328,7 @@ function renderRoster() {
   });
   $("#roster").innerHTML = `<thead><tr>${COLS.map(([k, l, c]) => `<th class="${c || ""}" data-k="${k}">${l}${S.sortKey === k ? (S.sortDir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead>
   <tbody>${rows.length ? rows.map(p => `<tr class="${p.injured ? "injured" : ""}" data-id="${p.id}">
-    <td><b>${tmLink(p)}</b>${p.sub_position ? `<div class="meta">${esc(p.sub_position)}${p.nationality ? " · " + esc(p.nationality) : ""}</div>` : ""}</td><td>${esc(p.pos)}</td><td class="num">${p.age}</td>
+    <td><div class="pcell">${avatar(p)}<div><b>${tmLink(p)}</b>${p.sub_position ? `<div class="meta">${esc(p.sub_position)}${p.nationality ? " · " + esc(p.nationality) : ""}</div>` : ""}</div></div></td><td>${esc(p.pos)}</td><td class="num">${p.age}</td>
     <td class="num" style="font-weight:600">${money(p.market_value_m)}</td>
     <td class="num" style="color:${ovrColor(p.est_rating)};font-weight:600">${p.est_rating}</td><td class="num">${p.est_potential}</td>
     <td class="num">${fitBar(p.style_fit)}</td>
