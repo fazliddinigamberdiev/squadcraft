@@ -25,16 +25,23 @@ const { matchClub, scoreName, GROUP, toks } = require("./match_photos.js");
   }
   const pool = [];
   for (const [club, sq] of Object.entries(squads)) if (real.has(club)) for (const p of sq.players) pool.push({ p, club, t: toks(p.name) });
-  const moves = [], none = [];
+  const moves = [], none = [], review = [];
   for (const d of left) {
     const c = pool.filter(a => !used.has(a.p.id) && a.p.position === GROUP[d.pos] && Math.abs(a.p.age - d.age) <= 1 && scoreName(d, a.t) >= 2);
     const ids = new Set(c.map(x => x.p.id));
-    if (ids.size === 1 && c[0].club !== d.club_id) { used.add(c[0].p.id); moves.push({ d, to: c[0].club, apiName: c[0].p.name }); } else none.push(d);
+    if (ids.size === 1 && c[0].club !== d.club_id) {
+      used.add(c[0].p.id);
+      const m = { d, to: c[0].club, apiName: c[0].p.name };
+      // a one-word DB name (Arthur, Oso, Beto...) can match a different player, so it needs a human check
+      if (toks(d.name).length < 2) review.push(m); else moves.push(m);
+    } else none.push(d);
   }
   const sql = ["-- Summer 2026 transfers: moves real players to the club the API shows them at", "begin;"];
   moves.forEach(m => sql.push(`update players set club_id = '${m.to}' where tm_id = ${Number(m.d.tm_id)} and club_id = '${m.d.club_id}';  -- ${m.d.name.replace(/'/g, "")}: ${m.d.club_id} -> ${m.to}`));
   sql.push("commit;");
   fs.writeFileSync("moves.sql", sql.join("\n") + "\n");
   fs.writeFileSync("moves_report.txt", `${moves.length} planned moves\n` + moves.map(m => `${m.d.name} (${m.d.pos}, ${m.d.age}): ${cname[m.d.club_id]} -> ${cname[m.to]}   [API: ${m.apiName}]`).join("\n") + "\n");
+  fs.writeFileSync("moves_review.txt", `${review.length} single-name matches, NOT in moves.sql (check by hand)\n` + review.map(m => `${m.d.name} (${m.d.pos}, ${m.d.age}): ${cname[m.d.club_id]} -> ${cname[m.to]}   [API: ${m.apiName}]`).join("\n") + "\n");
+  console.log(`${review.length} single-name matches held back in moves_review.txt.`);
   console.log(`${moves.length} moves planned. See moves_report.txt and moves.sql (nothing has been changed yet).`);
 })();
