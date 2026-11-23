@@ -50,7 +50,7 @@ function matchEverywhere(leftovers, squads, usedIds) {
   }
   return { found, rest };
 }
-module.exports = { matchClub, matchEverywhere, scoreName };
+module.exports = { matchClub, matchEverywhere, scoreName, GROUP, toks };
 if (require.main !== module) return;
 
 (async () => {
