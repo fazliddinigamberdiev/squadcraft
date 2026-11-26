@@ -410,16 +410,20 @@ async function loadRecruit() {
   setSelect($("#rPos"), S.positions.map(p => [p.code, p.code + " — " + p.name]), pos);
   setSelect($("#rLeague"), [["ALL", "All top 5 leagues"], ...Object.entries(S.leagues).map(([k, v]) => [k, v.name])], S.rLeague);
   const league = S.rLeague === "ALL" ? null : S.rLeague;
-  const upFee = $("#upFee").value === "" ? null : Number($("#upFee").value);
+  const cap = $("#capBudget").checked ? Number(w.budget_m) : null;   // transfer budget (EUR M) when the cap is on
+  const lim = (v, c) => c == null ? v : (v == null ? c : Math.min(v, c)); // the stricter of the typed fee and the budget
+  const upTyped = $("#upFee").value === "" ? null : Number($("#upFee").value);
+  const upFee = lim(upTyped, cap);
   const feeRaw = $("#youngFee").value, ageRaw = $("#youngAge").value;
+  const futFee = feeRaw === "" ? null : lim(Number(feeRaw), cap);
   $("#recruitNote").innerHTML = w.window_state === "closed"
     ? `<p>⛔ <b>Transfer window closed.</b> These lists are for planning the next window. For urgent cover use <b>Emergency Free Agents</b>.</p><button class="btn primary" id="toEmergency">Go to free agents</button>`
-    : `<p>Targets for <b>${esc(posName(pos))}</b> from clubs with real squad data, ranked for a <b>${esc(w.style)}</b> manager (${esc((S.styles[w.style] || {}).description || "")}). Budget set: <b>€${Number(w.budget_m)}M</b>.</p>`;
+    : `<p>Targets for <b>${esc(posName(pos))}</b> from clubs with real squad data, ranked for a <b>${esc(w.style)}</b> manager (${esc((S.styles[w.style] || {}).description || "")}). Budget: <b>€${Number(w.budget_m)}M</b>${cap == null ? " (not applied: cap is off)" : " — both lists are capped at this amount"}.</p>`;
   const futureOk = feeRaw !== "" && Number(feeRaw) >= 0 && ageRaw !== "" && Number(ageRaw) >= 15 && Number(ageRaw) <= 50;
   try {
     const [up, fut] = await Promise.all([
       rpc("fn_recommend_upgrade", { p_roster: S.ws, p_pos: pos, p_max_fee: upFee, p_league: league, p_limit: 10 }),
-      futureOk ? rpc("fn_recommend_future", { p_roster: S.ws, p_pos: pos, p_max_fee: Number(feeRaw), p_max_age: Number(ageRaw), p_league: league, p_limit: 10 }) : Promise.resolve(null)
+      futureOk ? rpc("fn_recommend_future", { p_roster: S.ws, p_pos: pos, p_max_fee: futFee, p_max_age: Number(ageRaw), p_league: league, p_limit: 10 }) : Promise.resolve(null)
     ]);
     if (my !== recSeq) return;
     const st = up.starter;
@@ -433,6 +437,7 @@ async function loadRecruit() {
     const vs = p => sR == null ? "" : `<span class="tag t-info">OVR ${p.est_rating} vs starter ${sR}</span>`;
 
     $("#upMeta").textContent = up.total ? `${up.total} match${up.total === 1 ? "" : "es"} · top ${up.candidates.length}` : "Rates above your starter";
+    if (upFee != null) $("#upMeta").textContent += ` · fee ≤ €${upFee}M`;
     $("#upgradeList").innerHTML = up.candidates.length
       ? up.candidates.map(p => card(p, sub(p), price(p), `<span class="tag t-ok">+${p.rating_gain} OVR</span>${vs(p)}<span class="tag ${p.style_fit >= 70 ? "t-ok" : "t-warn"}">Fit ${p.style_fit}</span>`, sign(p))).join("")
       : `<div class="empty">${esc(up.message)}</div>`;
@@ -441,7 +446,7 @@ async function loadRecruit() {
       $("#youngMeta").textContent = "Enter a fee and an age";
       $("#youngList").innerHTML = `<div class="empty">Enter a maximum fee (0 or more) and a maximum age (15-50).</div>`;
     } else {
-      $("#youngMeta").textContent = fut.total ? `${fut.total} match${fut.total === 1 ? "" : "es"} · top ${fut.candidates.length}` : `Age ≤ ${ageRaw} · fee ≤ €${feeRaw}M`;
+      $("#youngMeta").textContent = fut.total ? `${fut.total} match${fut.total === 1 ? "" : "es"} · top ${fut.candidates.length}` : `Age ≤ ${ageRaw} · fee ≤ €${futFee}M`;
       $("#youngList").innerHTML = fut.candidates.length
         ? fut.candidates.map(p => card(p, sub(p), price(p), `<span class="tag t-info">Ceiling ${p.est_potential}</span>${vs(p)}<span class="tag ${p.style_fit >= 70 ? "t-ok" : "t-warn"}">Fit ${p.style_fit}</span>`, sign(p))).join("")
         : `<div class="empty">${esc(fut.message)}</div>`;
@@ -653,6 +658,7 @@ function wire() {
   $("#rLeague").onchange = e => { S.rLeague = e.target.value; loadRecruit(); };
   const recSoon = debounce(loadRecruit, 350);
   ["#upFee", "#youngFee", "#youngAge"].forEach(id => $(id).addEventListener("input", recSoon));
+  $("#capBudget").addEventListener("change", recSoon);
   document.addEventListener("click", e => {
     if (e.target.closest("#toEmergency")) switchTab("emergency");
     const t = e.target.closest("[data-sign-tm]"); if (t) signTm(t);

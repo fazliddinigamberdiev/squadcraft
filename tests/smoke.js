@@ -4,7 +4,7 @@ const { JSDOM } = require("jsdom");
 const fs = require("fs"), path = require("path");
 const root = path.join(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const calls = [];
+const calls = [], bodies = [];
 const player = (id, pos, r, inj) => ({ id, name: "P" + id, pos, sub_position: "", nationality: "X", age: 25, contract_until: 2027, market_value_m: 10, est_rating: r, est_potential: r + 2, est_wage_k: 20, injured: !!inj, tm_id: id, tm_slug: "p" + id, style_fit: 70, flag_expiring: true, flag_aging: false, flag_prospect: false, flag_mismatch: false });
 const club = { id: "PL-ARS", name: "Arsenal", code: "ARS", lg: "PL", league_name: "Premier League", style: "Possession", is_real: true, squad_size: 2, strength: 80, budget_m: 100 };
 const positions = ["GK","CB","FB","DM","CM","AM","W","ST"].map((c, i) => ({ code: c, name: c, target_depth: 2, sort_order: i }));
@@ -31,7 +31,7 @@ function reply(url, method, body) {
 (async () => {
   const dom = new JSDOM(html, { runScripts: "outside-only", url: "http://localhost/", pretendToBeVisual: true });
   const w = dom.window;
-  w.fetch = async (url, o) => { calls.push(url.split("/rest/v1/")[1]); const d = reply(url, o.method, o.body); return { ok: true, status: 200, text: async () => JSON.stringify(d) }; };
+  w.fetch = async (url, o) => { calls.push(url.split("/rest/v1/")[1]); bodies.push([url.split("/rest/v1/")[1], o.body ? JSON.parse(o.body) : null]); const d = reply(url, o.method, o.body); return { ok: true, status: 200, text: async () => JSON.stringify(d) }; };
   w.scrollTo = () => {};
   w.eval(fs.readFileSync(path.join(root, "config.js"), "utf8"));
   w.eval(fs.readFileSync(path.join(root, "app.js"), "utf8"));
@@ -48,6 +48,16 @@ function reply(url, method, body) {
   d.querySelector("#youngFee").value = "10"; d.querySelector("#youngAge").value = "21";
   d.querySelector("#youngFee").dispatchEvent(new w.Event("input")); await wait(500);
   ok(d.querySelector("#youngList").textContent.includes("No candidates match these limits"), "future-proof empty message from DB");
+  // budget cap: workspace budget is 60 -> both lists use min(typed fee, 60); cap off -> typed fee only
+  const lastArg = (fn, k) => { const b = bodies.filter(x => x[0] === "rpc/" + fn).pop(); return b && b[1][k]; };
+  ok(lastArg("fn_recommend_upgrade", "p_max_fee") === 60, "upgrade list capped at budget when no fee typed");
+  ok(lastArg("fn_recommend_future", "p_max_fee") === 10, "future-proof uses the smaller typed fee (10 < budget 60)");
+  d.querySelector("#youngFee").value = "100"; d.querySelector("#youngFee").dispatchEvent(new w.Event("input")); await wait(500);
+  ok(lastArg("fn_recommend_future", "p_max_fee") === 60, "future-proof fee above budget is capped at 60");
+  d.querySelector("#capBudget").checked = false; d.querySelector("#capBudget").dispatchEvent(new w.Event("change")); await wait(500);
+  ok(lastArg("fn_recommend_upgrade", "p_max_fee") === null && lastArg("fn_recommend_future", "p_max_fee") === 100, "cap off: no budget limit applied");
+  d.querySelector("#capBudget").checked = true; d.querySelector("#capBudget").dispatchEvent(new w.Event("change")); await wait(500);
+  d.querySelector("#youngFee").value = "10"; d.querySelector("#youngFee").dispatchEvent(new w.Event("input")); await wait(500);
   d.querySelector('[data-tab="emergency"]').click(); await wait(100);
   ok(d.querySelectorAll("#faList .card").length === 1, "free agents rendered");
   d.querySelector('[data-tab="offload"]').click(); await wait(100);
