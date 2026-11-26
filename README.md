@@ -66,6 +66,21 @@ cd tests && npm install && npm test
 
 The SQL rules were also verified directly in PostgreSQL (see the midterm/final report) by running the functions on real squads.
 
+## Differences from M1/M2
+
+The M1 vision and M2 story slice are in `docs/`. The final app follows them, with these differences:
+
+| M1/M2 said | Final app |
+|---|---|
+| "Live" valuations and real-time data (M1 Assumption 3, high confidence) | The data is a snapshot: the open dataset is current to 6 July 2026 and its maintainer paused updates. The club of 310 players who moved in summer 2026 was updated from API-Football (free plan, 100 requests a day). Injuries are set by the user, not read from a feed. Players who left for clubs outside our 96 are not removed, and new signings are not added. |
+| "Position-specific performance rating (0-100) from mock data" (S2-AC1) | `est_rating` (1-99) is a SquadCraft estimate from market value and age, not match performance. The UI says "estimates". The data is real players, not mock data. |
+| Prototype without a custom backend, live API or full player database (M1) | The scope grew on purpose: a Supabase database with 96 clubs, about 2,700 players, row-level security and SQL functions for every rule. |
+| Offloader and Emergency Free Agent Finder deferred (M2) | Both are built (`fn_offload`, `fn_emergency`), with the wage filter from the M1 critique. |
+| Negotiation simulation excluded | Still excluded. |
+| Immediate Upgrade has no fee limit; Future-Proof uses the fee typed by the user | Same, plus an option (on by default) to cap both lists at the squad's transfer budget. Untick it to use only the typed fees. |
+| User check: 3-5 analysts, more than 75% of recommendations plausible (M1) | Not done. We make no claim that the recommendations are verified by users. Only the rules were checked, in SQL and in `tests/smoke.js`. |
+| M2 reviewer names and tick boxes | Not filled in yet (they need a team member). |
+
 ## Known issues / not started
 
 - Data is a snapshot; there is no refresh pipeline.
